@@ -2934,7 +2934,7 @@ let musicInitialized = false;
 let musicGain = null;
 let musicInterval = null;
 
-// Ambient lo-fi notes: C minor pentatonic across octaves
+// C minor pentatonic across octaves
 const MELODY_NOTES = [
   // C3, Eb3, F3, G3, Bb3
   130.81, 155.56, 174.61, 196.00, 233.08,
@@ -2944,28 +2944,28 @@ const MELODY_NOTES = [
   523.25, 622.25
 ];
 
-// Slow, spacious melody — lots of rests (-1 = rest)
+// Upbeat melody with energy — fewer rests, more movement
 const MELODY_PATTERN = [
-  5, -1, 7, -1, 8, -1, 9, -1,
-  10, -1, -1, 8, -1, 7, -1, -1,
-  5, -1, 6, -1, 8, -1, 7, -1,
-  9, -1, -1, -1, 5, -1, -1, -1,
-  8, -1, 7, -1, 5, -1, 6, -1,
-  7, -1, -1, 5, -1, -1, 8, -1,
-  10, -1, 9, -1, 7, -1, -1, -1,
-  5, -1, -1, -1, -1, -1, -1, -1
+  5, 7, 8, 7, 5, 8, 9, -1,
+  10, 8, 7, 5, 7, 8, 10, 9,
+  5, 6, 8, 7, 9, 8, 7, 5,
+  8, 9, 10, 8, 7, 5, 7, -1,
+  7, 8, 5, 7, 9, 10, 8, 7,
+  5, 7, 8, 9, 10, -1, 8, 7,
+  9, 8, 7, 5, 6, 8, 7, 9,
+  10, 8, 7, 5, 8, 7, 5, -1
 ];
 
-// Slow root bass notes
+// Driving bass
 const BASS_PATTERN = [
-  0, -1, -1, -1, 2, -1, -1, -1,
-  3, -1, -1, -1, 0, -1, -1, -1,
-  0, -1, -1, -1, 4, -1, -1, -1,
-  3, -1, -1, -1, 0, -1, -1, -1,
-  2, -1, -1, -1, 0, -1, -1, -1,
-  3, -1, -1, -1, 4, -1, -1, -1,
-  3, -1, -1, -1, 2, -1, -1, -1,
-  0, -1, -1, -1, -1, -1, -1, -1
+  0, -1, 0, -1, 2, -1, 2, -1,
+  3, -1, 3, -1, 0, -1, 0, -1,
+  0, -1, 4, -1, 3, -1, 2, -1,
+  3, -1, 0, -1, 2, -1, 0, -1,
+  2, -1, 3, -1, 0, -1, 4, -1,
+  0, -1, 2, -1, 3, -1, 3, -1,
+  3, -1, 4, -1, 2, -1, 0, -1,
+  3, -1, 2, -1, 0, -1, 0, -1
 ];
 
 function initMusic() {
@@ -2986,9 +2986,8 @@ function playNote(freq, startTime, duration, type, gainVal) {
   const noteGain = musicCtx.createGain();
   osc.type = type;
   osc.frequency.value = freq;
-  // Soft attack, long release for ambient feel
-  const attack = Math.min(0.15, duration * 0.3);
-  const release = Math.min(0.3, duration * 0.5);
+  const attack = Math.min(0.04, duration * 0.15);
+  const release = Math.min(0.1, duration * 0.3);
   noteGain.gain.setValueAtTime(0, startTime);
   noteGain.gain.linearRampToValueAtTime(gainVal, startTime + attack);
   noteGain.gain.setValueAtTime(gainVal, startTime + duration - release);
@@ -3001,7 +3000,7 @@ function playNote(freq, startTime, duration, type, gainVal) {
 
 function scheduleLoop() {
   if (!musicCtx) return;
-  const bpm = 75; // slow, relaxed tempo
+  const bpm = 140;
   const beatDur = 60 / bpm;
   const now = musicCtx.currentTime + 0.1;
 
@@ -3009,20 +3008,20 @@ function scheduleLoop() {
     const t = now + i * beatDur;
     const mIdx = MELODY_PATTERN[i];
     if (mIdx >= 0) {
-      playNote(MELODY_NOTES[mIdx], t, beatDur * 1.8, "sine", 0.2);
+      playNote(MELODY_NOTES[mIdx], t, beatDur * 0.8, "sine", 0.22);
     }
     const bIdx = BASS_PATTERN[i];
     if (bIdx >= 0) {
-      playNote(MELODY_NOTES[bIdx] / 2, t, beatDur * 3.2, "triangle", 0.15);
+      playNote(MELODY_NOTES[bIdx] / 2, t, beatDur * 1.6, "triangle", 0.18);
     }
   }
 }
 
 function startMelodyLoop() {
   scheduleLoop();
-  const bpm = 75;
+  const bpm = 140;
   const loopDuration = (60 / bpm) * MELODY_PATTERN.length * 1000;
-  musicInterval = setInterval(scheduleLoop, loopDuration - 200);
+  musicInterval = setInterval(scheduleLoop, loopDuration - 150);
   musicPlaying = true;
 }
 
