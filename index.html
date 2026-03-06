@@ -2183,12 +2183,12 @@ let airObstacles = [], airTimer = 120;
 
 // ── Physics ────────────────────────────────────────────────
 function jump() {
-  if (!player.jumping) { player.vy = -16; player.jumping = true; }
+  if (!player.jumping) { player.vy = -16; player.jumping = true; playJumpSfx(); }
 }
 
 function startDuck() {
   if (!player.ducking && !player.jumping) {
-    player.ducking = true;
+    player.ducking = true; playDuckSfx();
     player.y = GROUND_Y + (PLAYER_H - DUCK_H);
     player.h = DUCK_H;
   }
@@ -2442,7 +2442,7 @@ function update() {
   coins.forEach(c => { c.x -= speed; });
   coins.forEach(c => {
     if (collectCoin(c)) {
-      c.collected = true; score += 5; coinCount++; missionProgress.totalCoins++;
+      c.collected = true; score += 5; coinCount++; missionProgress.totalCoins++; playCoinSfx();
       scoreEl.textContent = score; coinEl.textContent = coinCount; saveProgress();
       spawnParticles(c.x, c.y, "#ffd700", 5);
     }
@@ -2464,6 +2464,7 @@ function update() {
 
   if (obstacles.some(collides) || airObstacles.some(collidesAir)) {
     state = "dead";
+    stopMusic();
     playBuzzer();
     spawnParticles(player.x + player.w / 2, player.y + player.h / 2, "#ff4444", 12);
     spawnParticles(player.x + player.w / 2, player.y + player.h / 2, "#ff8800", 6);
@@ -2564,6 +2565,7 @@ function startGame() {
   scoreEl.textContent = 0;
   state = "running";
   msgEl.textContent = "SPACE / tap to jump";
+  startMusic();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2925,160 +2927,261 @@ document.getElementById("daily-reward-claim").addEventListener("click", () => {
 });
 
 // ═══════════════════════════════════════════════════════════
-//  BACKGROUND MUSIC (Procedural Web Audio)
+//  AUDIO SYSTEM — Stereo music + SFX
 // ═══════════════════════════════════════════════════════════
-let musicCtx = null;
+let audioCtx = null;
+let musicOn = localStorage.getItem("dinoMusicOn") !== "false";
 let musicPlaying = false;
-let musicOn = localStorage.getItem("dinoMusicOn") !== "false"; // default on
-let musicInitialized = false;
-let musicGain = null;
 let musicInterval = null;
+let masterGain = null;
+let melodyPanner = null;
+let melody2Panner = null;
+let bassPanner = null;
+let padPanner = null;
+let hihatPanner = null;
 
-// C minor pentatonic across octaves
-const MELODY_NOTES = [
-  // C3, Eb3, F3, G3, Bb3
-  130.81, 155.56, 174.61, 196.00, 233.08,
-  // C4, Eb4, F4, G4, Bb4
-  261.63, 311.13, 349.23, 392.00, 466.16,
-  // C5, Eb5
-  523.25, 622.25
-];
-
-// Upbeat melody with energy — fewer rests, more movement
-const MELODY_PATTERN = [
-  5, 7, 8, 7, 5, 8, 9, -1,
-  10, 8, 7, 5, 7, 8, 10, 9,
-  5, 6, 8, 7, 9, 8, 7, 5,
-  8, 9, 10, 8, 7, 5, 7, -1,
-  7, 8, 5, 7, 9, 10, 8, 7,
-  5, 7, 8, 9, 10, -1, 8, 7,
-  9, 8, 7, 5, 6, 8, 7, 9,
-  10, 8, 7, 5, 8, 7, 5, -1
-];
-
-// Driving bass
-const BASS_PATTERN = [
-  0, -1, 0, -1, 2, -1, 2, -1,
-  3, -1, 3, -1, 0, -1, 0, -1,
-  0, -1, 4, -1, 3, -1, 2, -1,
-  3, -1, 0, -1, 2, -1, 0, -1,
-  2, -1, 3, -1, 0, -1, 4, -1,
-  0, -1, 2, -1, 3, -1, 3, -1,
-  3, -1, 4, -1, 2, -1, 0, -1,
-  3, -1, 2, -1, 0, -1, 0, -1
-];
-
-function initMusic() {
-  if (musicInitialized) return;
-  musicInitialized = true;
-  try {
-    musicCtx = new (window.AudioContext || window.webkitAudioContext)();
-    musicGain = musicCtx.createGain();
-    musicGain.connect(musicCtx.destination);
-    musicGain.gain.value = musicOn ? 0.12 : 0;
-    startMelodyLoop();
-  } catch(e) {}
+function ensureAudio() {
+  if (audioCtx) return audioCtx;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = musicOn ? 0.14 : 0;
+  masterGain.connect(audioCtx.destination);
+  // Stereo panners for each voice
+  melodyPanner = audioCtx.createStereoPanner(); melodyPanner.pan.value = 0.3; melodyPanner.connect(masterGain);
+  melody2Panner = audioCtx.createStereoPanner(); melody2Panner.pan.value = -0.3; melody2Panner.connect(masterGain);
+  bassPanner = audioCtx.createStereoPanner(); bassPanner.pan.value = 0; bassPanner.connect(masterGain);
+  padPanner = audioCtx.createStereoPanner(); padPanner.pan.value = -0.5; padPanner.connect(masterGain);
+  hihatPanner = audioCtx.createStereoPanner(); hihatPanner.pan.value = 0.5; hihatPanner.connect(masterGain);
+  return audioCtx;
 }
 
-function playNote(freq, startTime, duration, type, gainVal) {
-  if (!musicCtx || freq <= 0) return;
-  const osc = musicCtx.createOscillator();
-  const noteGain = musicCtx.createGain();
+// Notes: C minor pentatonic
+const N = {
+  C3: 130.81, Eb3: 155.56, F3: 174.61, G3: 196.00, Bb3: 233.08,
+  C4: 261.63, Eb4: 311.13, F4: 349.23, G4: 392.00, Bb4: 466.16,
+  C5: 523.25, Eb5: 622.25, F5: 698.46, G5: 783.99
+};
+
+// Lead melody (right-panned sine)
+const LEAD = [
+  N.C4, N.Eb4, N.G4, N.F4,  N.Eb4, N.G4, N.Bb4, N.G4,
+  N.C5, N.Bb4, N.G4, N.F4,  N.Eb4, N.F4, N.G4, -1,
+  N.G4, N.Bb4, N.C5, N.Bb4, N.G4, N.F4, N.Eb4, N.F4,
+  N.G4, N.F4, N.Eb4, N.C4,  N.Eb4, N.F4, N.G4, -1,
+  N.C5, N.Eb5, N.C5, N.Bb4, N.G4, N.Bb4, N.C5, N.G4,
+  N.F4, N.G4, N.Bb4, N.G4,  N.F4, N.Eb4, N.C4, -1,
+  N.Eb4, N.G4, N.Bb4, N.C5, N.Bb4, N.G4, N.F4, N.G4,
+  N.Eb4, N.C4, N.Eb4, N.F4, N.G4, N.Bb4, N.G4, -1
+];
+
+// Counter melody (left-panned triangle, plays every other beat)
+const COUNTER = [
+  N.G3, -1, N.Eb3, -1, N.F3, -1, N.G3, -1,
+  N.Bb3, -1, N.G3, -1, N.C4, -1, N.Bb3, -1,
+  N.G3, -1, N.F3, -1, N.Eb3, -1, N.F3, -1,
+  N.G3, -1, N.Bb3, -1, N.G3, -1, N.F3, -1,
+  N.C4, -1, N.Bb3, -1, N.G3, -1, N.Bb3, -1,
+  N.F3, -1, N.G3, -1, N.Eb3, -1, N.F3, -1,
+  N.G3, -1, N.Bb3, -1, N.C4, -1, N.Bb3, -1,
+  N.G3, -1, N.F3, -1, N.Eb3, -1, N.C3, -1
+];
+
+// Bass line (center, triangle, octave below)
+const BASS = [
+  N.C3, -1, -1, -1, N.F3, -1, -1, -1,
+  N.G3, -1, -1, -1, N.C3, -1, -1, -1,
+  N.Eb3, -1, -1, -1, N.Bb3, -1, -1, -1,
+  N.C3, -1, -1, -1, N.G3, -1, -1, -1,
+  N.C3, -1, -1, -1, N.Eb3, -1, -1, -1,
+  N.F3, -1, -1, -1, N.G3, -1, -1, -1,
+  N.Eb3, -1, -1, -1, N.C3, -1, -1, -1,
+  N.G3, -1, -1, -1, N.C3, -1, -1, -1
+];
+
+// Pad chords (left-panned, sustained sine, very soft)
+const PAD = [
+  N.C4, -1, -1, -1, -1, -1, -1, -1,
+  N.G3, -1, -1, -1, -1, -1, -1, -1,
+  N.Eb4, -1, -1, -1, -1, -1, -1, -1,
+  N.Bb3, -1, -1, -1, -1, -1, -1, -1,
+  N.C4, -1, -1, -1, -1, -1, -1, -1,
+  N.F3, -1, -1, -1, -1, -1, -1, -1,
+  N.G3, -1, -1, -1, -1, -1, -1, -1,
+  N.C4, -1, -1, -1, -1, -1, -1, -1
+];
+
+// Hi-hat rhythm pattern (1 = hit, -1 = rest) — right-panned noise bursts
+const HIHAT = [
+  1, -1, 1, 1, 1, -1, 1, 1,
+  1, -1, 1, 1, 1, -1, 1, -1,
+  1, -1, 1, 1, 1, -1, 1, 1,
+  1, -1, 1, -1, 1, -1, 1, 1,
+  1, -1, 1, 1, 1, -1, 1, 1,
+  1, -1, 1, -1, 1, -1, 1, 1,
+  1, -1, 1, 1, 1, -1, 1, 1,
+  1, -1, 1, 1, 1, -1, 1, -1
+];
+
+function mNote(freq, time, dur, type, vol, dest) {
+  if (!audioCtx || freq <= 0) return;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
   osc.type = type;
   osc.frequency.value = freq;
-  const attack = Math.min(0.04, duration * 0.15);
-  const release = Math.min(0.1, duration * 0.3);
-  noteGain.gain.setValueAtTime(0, startTime);
-  noteGain.gain.linearRampToValueAtTime(gainVal, startTime + attack);
-  noteGain.gain.setValueAtTime(gainVal, startTime + duration - release);
-  noteGain.gain.linearRampToValueAtTime(0, startTime + duration);
-  osc.connect(noteGain);
-  noteGain.connect(musicGain);
-  osc.start(startTime);
-  osc.stop(startTime + duration);
+  g.gain.setValueAtTime(0, time);
+  g.gain.linearRampToValueAtTime(vol, time + 0.03);
+  g.gain.setValueAtTime(vol, time + dur - 0.05);
+  g.gain.linearRampToValueAtTime(0, time + dur);
+  osc.connect(g); g.connect(dest);
+  osc.start(time); osc.stop(time + dur);
+}
+
+function mHihat(time, dest) {
+  if (!audioCtx) return;
+  const bufSize = audioCtx.sampleRate * 0.04;
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) d[i] = (Math.random() * 2 - 1) * 0.3;
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.12, time);
+  g.gain.linearRampToValueAtTime(0, time + 0.04);
+  // Highpass to make it sizzle
+  const hp = audioCtx.createBiquadFilter();
+  hp.type = "highpass"; hp.frequency.value = 7000;
+  src.connect(hp); hp.connect(g); g.connect(dest);
+  src.start(time); src.stop(time + 0.05);
 }
 
 function scheduleLoop() {
-  if (!musicCtx) return;
-  const bpm = 140;
+  if (!audioCtx || !musicPlaying) return;
+  const bpm = 150;
   const beatDur = 60 / bpm;
-  const now = musicCtx.currentTime + 0.1;
+  const now = audioCtx.currentTime + 0.1;
 
-  for (let i = 0; i < MELODY_PATTERN.length; i++) {
+  for (let i = 0; i < LEAD.length; i++) {
     const t = now + i * beatDur;
-    const mIdx = MELODY_PATTERN[i];
-    if (mIdx >= 0) {
-      playNote(MELODY_NOTES[mIdx], t, beatDur * 0.8, "sine", 0.22);
-    }
-    const bIdx = BASS_PATTERN[i];
-    if (bIdx >= 0) {
-      playNote(MELODY_NOTES[bIdx] / 2, t, beatDur * 1.6, "triangle", 0.18);
-    }
+    if (LEAD[i] > 0) mNote(LEAD[i], t, beatDur * 0.75, "sine", 0.28, melodyPanner);
+    if (COUNTER[i] > 0) mNote(COUNTER[i], t, beatDur * 0.9, "triangle", 0.15, melody2Panner);
+    if (BASS[i] > 0) mNote(BASS[i] / 2, t, beatDur * 3, "triangle", 0.2, bassPanner);
+    if (PAD[i] > 0) mNote(PAD[i], t, beatDur * 7, "sine", 0.06, padPanner);
+    if (HIHAT[i] > 0) mHihat(t, hihatPanner);
   }
 }
 
-function startMelodyLoop() {
-  scheduleLoop();
-  const bpm = 140;
-  const loopDuration = (60 / bpm) * MELODY_PATTERN.length * 1000;
-  musicInterval = setInterval(scheduleLoop, loopDuration - 150);
+function startMusic() {
+  if (musicPlaying || !musicOn) return;
+  ensureAudio();
   musicPlaying = true;
+  scheduleLoop();
+  const bpm = 150;
+  const loopMs = (60 / bpm) * LEAD.length * 1000;
+  musicInterval = setInterval(scheduleLoop, loopMs - 200);
 }
 
-// ── Death Buzzer Sound ──
+function stopMusic() {
+  musicPlaying = false;
+  if (musicInterval) { clearInterval(musicInterval); musicInterval = null; }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SOUND EFFECTS
+// ═══════════════════════════════════════════════════════════
+function sfx(fn) {
+  try { ensureAudio(); fn(audioCtx); } catch(e) {}
+}
+
+function playJumpSfx() {
+  sfx(ctx => {
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(350, t);
+    osc.frequency.exponentialRampToValueAtTime(700, t + 0.12);
+    g.gain.setValueAtTime(0.25, t);
+    g.gain.linearRampToValueAtTime(0, t + 0.18);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.18);
+  });
+}
+
+function playDuckSfx() {
+  sfx(ctx => {
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(500, t);
+    osc.frequency.exponentialRampToValueAtTime(200, t + 0.1);
+    g.gain.setValueAtTime(0.2, t);
+    g.gain.linearRampToValueAtTime(0, t + 0.12);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.12);
+  });
+}
+
+function playCoinSfx() {
+  sfx(ctx => {
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.setValueAtTime(1108, t + 0.06);
+    g.gain.setValueAtTime(0.2, t);
+    g.gain.linearRampToValueAtTime(0, t + 0.15);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.15);
+  });
+}
+
 function playBuzzer() {
-  try {
-    const ctx = musicCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const now = ctx.currentTime;
-    const buzzGain = ctx.createGain();
-    buzzGain.connect(ctx.destination);
-    buzzGain.gain.setValueAtTime(0.35, now);
-    buzzGain.gain.linearRampToValueAtTime(0, now + 0.45);
-
-    // Harsh low buzz
+  sfx(ctx => {
+    const t = ctx.currentTime;
+    // Harsh sawtooth buzz
     const osc1 = ctx.createOscillator();
+    const g1 = ctx.createGain();
     osc1.type = "sawtooth";
-    osc1.frequency.setValueAtTime(120, now);
-    osc1.frequency.linearRampToValueAtTime(80, now + 0.4);
-    osc1.connect(buzzGain);
-    osc1.start(now);
-    osc1.stop(now + 0.45);
-
-    // Dissonant overtone
+    osc1.frequency.setValueAtTime(120, t);
+    osc1.frequency.linearRampToValueAtTime(80, t + 0.4);
+    g1.gain.setValueAtTime(0.35, t);
+    g1.gain.linearRampToValueAtTime(0, t + 0.45);
+    osc1.connect(g1); g1.connect(ctx.destination);
+    osc1.start(t); osc1.stop(t + 0.45);
+    // Dissonant square
     const osc2 = ctx.createOscillator();
-    osc2.type = "square";
-    osc2.frequency.setValueAtTime(185, now);
-    osc2.frequency.linearRampToValueAtTime(60, now + 0.35);
     const g2 = ctx.createGain();
-    g2.gain.setValueAtTime(0.2, now);
-    g2.gain.linearRampToValueAtTime(0, now + 0.35);
-    osc2.connect(g2);
-    g2.connect(ctx.destination);
-    osc2.start(now);
-    osc2.stop(now + 0.4);
-  } catch(e) {}
+    osc2.type = "square";
+    osc2.frequency.setValueAtTime(185, t);
+    osc2.frequency.linearRampToValueAtTime(60, t + 0.35);
+    g2.gain.setValueAtTime(0.2, t);
+    g2.gain.linearRampToValueAtTime(0, t + 0.35);
+    osc2.connect(g2); g2.connect(ctx.destination);
+    osc2.start(t); osc2.stop(t + 0.4);
+  });
 }
 
 function toggleMusic() {
   musicOn = !musicOn;
   localStorage.setItem("dinoMusicOn", musicOn);
-  if (musicGain) {
-    musicGain.gain.value = musicOn ? 0.12 : 0;
-  }
+  if (masterGain) masterGain.gain.value = musicOn ? 0.14 : 0;
+  if (musicOn && state === "running") startMusic();
+  if (!musicOn) stopMusic();
   document.getElementById("music-toggle").textContent = musicOn ? "🔊" : "🔇";
 }
 
-// Music toggle button
 document.getElementById("music-toggle").addEventListener("click", () => {
-  initMusic();
+  ensureAudio();
   toggleMusic();
 });
 document.getElementById("music-toggle").textContent = musicOn ? "🔊" : "🔇";
 
-// Auto-start music on first user interaction
-document.addEventListener("click", function startMusicOnce() {
-  initMusic();
-  document.removeEventListener("click", startMusicOnce);
+// Init audio on first interaction
+document.addEventListener("click", function initAudioOnce() {
+  ensureAudio();
+  document.removeEventListener("click", initAudioOnce);
 }, { once: true });
 
 // ── Init ───────────────────────────────────────────────────
