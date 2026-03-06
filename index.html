@@ -1,0 +1,3039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dino Jump</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+    }
+    #hud {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 10px;
+    }
+    #score-display {
+      font-size: 22px;
+      font-weight: bold;
+      color: #333;
+      letter-spacing: 2px;
+    }
+    #change-char-btn {
+      padding: 6px 14px;
+      background: #fff;
+      border: 2px solid #888;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #444;
+      transition: all 0.15s;
+    }
+    #change-char-btn:hover { background: #f0f0f0; border-color: #555; }
+    canvas {
+      border: 3px solid #555;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      display: block;
+    }
+    #message { margin-top: 10px; font-size: 15px; color: #444; height: 20px; }
+
+    /* ── Modal ── */
+    #char-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    #char-modal.hidden { display: none; }
+    #char-panel {
+      background: #fff;
+      border-radius: 18px;
+      padding: 22px 24px 20px;
+      width: 560px;
+      max-width: 96vw;
+      max-height: 92vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 16px 50px rgba(0,0,0,0.4);
+    }
+    #char-panel h2 { text-align: center; font-size: 20px; color: #222; letter-spacing: 1px; }
+    #char-search {
+      width: 100%;
+      padding: 9px 14px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: 'Courier New', monospace;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    #char-search:focus { border-color: #777; }
+    #char-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      max-height: 260px;
+      padding-right: 2px;
+    }
+    .char-group-label {
+      font-size: 14px;
+      font-weight: bold;
+      color: #555;
+      letter-spacing: 1px;
+      margin-top: 6px;
+      margin-bottom: -4px;
+    }
+    .char-group-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .char-card {
+      border: 2.5px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 14px 8px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.12s;
+      background: #fafafa;
+      user-select: none;
+    }
+    .char-card { position: relative; }
+    .char-card:hover { background: #f0f0f0; border-color: #bbb; transform: translateY(-2px); }
+    .char-card.selected { border-color: #4CAF50; background: #e8f5e9; box-shadow: 0 0 0 2px #a5d6a7; }
+    .char-card.locked { opacity: 0.55; border-color: #ccc; }
+    .char-card.locked:hover { background: #f9f0e0; border-color: #d4a017; }
+    .char-icon { font-size: 34px; line-height: 1; display: block; }
+    .char-name { font-size: 11px; margin-top: 6px; color: #555; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+    .price-tag { font-size: 10px; color: #fff; background: #d4a017; border-radius: 8px; padding: 1px 6px; position: absolute; top: 4px; right: 4px; font-weight: bold; }
+    .price-tag.free { background: #4CAF50; }
+    .price-tag.owned { background: #888; }
+    #no-results { text-align: center; color: #aaa; font-size: 14px; padding: 20px; }
+    #char-play-btn {
+      padding: 13px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 17px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    #char-play-btn:hover { background: #43a047; }
+    #char-play-btn:active { background: #388e3c; }
+    .section-label {
+      font-size: 15px;
+      font-weight: bold;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+    #bg-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      overflow-y: auto;
+      max-height: 160px;
+      padding-right: 2px;
+    }
+    .bg-card {
+      border: 2.5px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 10px 8px 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.12s;
+      background: #fafafa;
+      user-select: none;
+    }
+    .bg-card { position: relative; }
+    .bg-card:hover { background: #f0f0f0; border-color: #bbb; transform: translateY(-2px); }
+    .bg-card.selected { border-color: #2196F3; background: #e3f2fd; box-shadow: 0 0 0 2px #90caf9; }
+    .bg-card.locked { opacity: 0.55; border-color: #ccc; }
+    .bg-card.locked:hover { background: #f9f0e0; border-color: #d4a017; }
+    .bg-icon { font-size: 28px; line-height: 1; display: block; }
+    .bg-name { font-size: 10px; margin-top: 4px; color: #555; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+
+    /* ── Store Modal ── */
+    #store-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    #store-modal.hidden { display: none; }
+    #store-panel {
+      background: #fff;
+      border-radius: 18px;
+      padding: 22px 24px 20px;
+      width: 600px;
+      max-width: 96vw;
+      max-height: 92vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 16px 50px rgba(0,0,0,0.4);
+    }
+    #store-panel h2 { text-align: center; font-size: 20px; color: #222; letter-spacing: 1px; }
+    #store-char-search {
+      width: 100%;
+      padding: 9px 14px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: 'Courier New', monospace;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    #store-char-search:focus { border-color: #777; }
+    #store-char-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      max-height: 340px;
+      padding-right: 2px;
+    }
+    #hat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .hat-card {
+      border: 2.5px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 12px 8px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.12s;
+      background: #fafafa;
+      user-select: none;
+      position: relative;
+    }
+    .hat-card:hover { background: #f0f0f0; border-color: #bbb; transform: translateY(-2px); }
+    .hat-card.selected { border-color: #ff9800; background: #fff3e0; box-shadow: 0 0 0 2px #ffcc80; }
+    .hat-card.locked { opacity: 0.55; border-color: #ccc; }
+    .hat-card.locked:hover { background: #f9f0e0; border-color: #d4a017; }
+    .hat-icon { font-size: 30px; line-height: 1; display: block; }
+    .hat-name { font-size: 10px; margin-top: 5px; color: #555; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+    #mission-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
+    .mission-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: #f9f9f9;
+      border-radius: 10px;
+      border: 1.5px solid #eee;
+    }
+    .mission-info { flex: 1; }
+    .mission-name { font-size: 12px; font-weight: bold; color: #333; }
+    .mission-desc { font-size: 10px; color: #888; margin-top: 2px; }
+    .mission-bar { height: 6px; background: #e0e0e0; border-radius: 3px; margin-top: 4px; overflow: hidden; }
+    .mission-bar-fill { height: 100%; background: #4CAF50; border-radius: 3px; transition: width 0.3s; }
+    .mission-reward { font-size: 10px; color: #d4a017; font-weight: bold; white-space: nowrap; }
+    .mission-claim-btn {
+      padding: 4px 10px;
+      background: #4CAF50;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+    }
+    .mission-claim-btn:hover { background: #43a047; }
+    .mission-done { font-size: 10px; color: #888; font-weight: bold; }
+    #store-btn {
+      padding: 6px 14px;
+      background: #fff;
+      border: 2px solid #d4a017;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #d4a017;
+      transition: all 0.15s;
+    }
+    #store-btn:hover { background: #fff8e1; border-color: #b8860b; }
+    #store-close-btn {
+      padding: 13px;
+      background: #757575;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 17px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    #store-close-btn:hover { background: #616161; }
+
+    /* ── Missions Modal ── */
+    #missions-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    #missions-modal.hidden { display: none; }
+    #missions-panel {
+      background: #fff;
+      border-radius: 18px;
+      padding: 22px 24px 20px;
+      width: 480px;
+      max-width: 96vw;
+      max-height: 92vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 16px 50px rgba(0,0,0,0.4);
+    }
+    #missions-panel h2 { text-align: center; font-size: 20px; color: #222; letter-spacing: 1px; }
+    #missions-btn {
+      padding: 6px 14px;
+      background: #fff;
+      border: 2px solid #4CAF50;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #4CAF50;
+      transition: all 0.15s;
+    }
+    #missions-btn:hover { background: #e8f5e9; border-color: #388e3c; }
+    #missions-close-btn {
+      padding: 13px;
+      background: #757575;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 17px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    #missions-close-btn:hover { background: #616161; }
+
+    /* ── Daily Reward Modal ── */
+    #daily-reward-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 300;
+    }
+    #daily-reward-modal.hidden { display: none; }
+    #daily-reward-panel {
+      background: #fff;
+      border-radius: 18px;
+      padding: 28px 32px 24px;
+      width: 380px;
+      max-width: 94vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 16px 50px rgba(0,0,0,0.4);
+      text-align: center;
+    }
+    #daily-reward-panel h2 { font-size: 22px; color: #222; letter-spacing: 1px; }
+    .streak-dots {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+    .streak-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: bold;
+      color: #999;
+      border: 2.5px solid #ccc;
+      transition: all 0.2s;
+    }
+    .streak-dot.filled {
+      background: #fff8e1;
+      border-color: #d4a017;
+      color: #d4a017;
+    }
+    .streak-dot.current {
+      background: #ffd700;
+      border-color: #b8860b;
+      color: #fff;
+      transform: scale(1.15);
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    }
+    #daily-reward-amount {
+      font-size: 28px;
+      font-weight: bold;
+      color: #d4a017;
+    }
+    #daily-reward-claim {
+      padding: 14px 40px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: background 0.15s;
+    }
+    #daily-reward-claim:hover { background: #43a047; }
+
+    /* ── Music Toggle ── */
+    #music-toggle {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 100;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 2px solid #aaa;
+      background: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    #music-toggle:hover { background: #f0f0f0; border-color: #777; }
+  </style>
+</head>
+<body>
+
+<!-- Character select modal -->
+<div id="char-modal">
+  <div id="char-panel">
+    <h2>🎮 Customize</h2>
+    <div id="modal-coins" style="text-align:center;font-size:14px;font-weight:bold;color:#d4a017;margin-bottom:8px;">COINS: 0</div>
+    <div class="section-label">Character</div>
+    <input id="char-search" type="text" placeholder="🔍  Search characters..." autocomplete="off" spellcheck="false" />
+    <div id="char-grid"></div>
+    <div class="section-label">Background</div>
+    <div id="bg-grid"></div>
+    <button id="char-play-btn">PLAY!</button>
+  </div>
+</div>
+
+<!-- Store modal -->
+<div id="store-modal" class="hidden">
+  <div id="store-panel">
+    <h2>🏪 Store</h2>
+    <div id="store-coins" style="text-align:center;font-size:14px;font-weight:bold;color:#d4a017;margin-bottom:4px;">COINS: 0</div>
+    <div class="section-label">Characters</div>
+    <input id="store-char-search" type="text" placeholder="🔍  Search breeds..." autocomplete="off" spellcheck="false" />
+    <div id="store-char-grid"></div>
+    <div class="section-label">Hats</div>
+    <div id="hat-grid"></div>
+    <button id="store-close-btn">CLOSE</button>
+  </div>
+</div>
+
+<!-- Missions modal -->
+<div id="missions-modal" class="hidden">
+  <div id="missions-panel">
+    <h2>🗺️ Missions</h2>
+    <div id="mission-list"></div>
+    <button id="missions-close-btn">CLOSE</button>
+  </div>
+</div>
+
+<!-- Daily reward modal -->
+<div id="daily-reward-modal" class="hidden">
+  <div id="daily-reward-panel">
+    <h2>🎁 Daily Reward!</h2>
+    <div class="streak-dots" id="streak-dots"></div>
+    <div id="daily-reward-amount"></div>
+    <button id="daily-reward-claim">CLAIM!</button>
+  </div>
+</div>
+
+<!-- Music toggle -->
+<button id="music-toggle" title="Toggle music">🔇</button>
+
+<div id="hud">
+  <div id="score-display">SCORE: <span id="score">0</span> &nbsp; HI: <span id="hi">0</span> &nbsp; <span style="color:#d4a017">COINS: <span id="coincount">0</span></span></div>
+  <button id="change-char-btn">✏️ Customize</button>
+  <button id="store-btn">🏪 Store</button>
+  <button id="missions-btn">🗺️ Missions</button>
+</div>
+<canvas id="gameCanvas" width="800" height="260"></canvas>
+<div id="message"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CHARACTER DRAW FUNCTIONS
+//  All take: (ctx, bx, by, bw, bh, fc, running, jumping)
+//  bx/by = top-left corner, bw/bh = size
+//  fc = frame counter for animation
+// ═══════════════════════════════════════════════════════════
+
+function drawBunny(ctx, bx, by, bw, bh, fc, running, jumping, p) {
+  p = p || {};
+  const body = p.body || "#f5f0eb", tail = p.tail || "#fff", earInner = p.earInner || "#ffb6c1";
+  const eye = p.eye || "#222", blush = p.blush || "#ff9999", leg = p.leg || "#e8e0d8";
+  const cx = bx + bw / 2;
+  const legOff = (running && !jumping) ? Math.sin(fc * 0.35) * 5 : 0;
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.beginPath(); ctx.ellipse(cx, by + bh + 1, bw * 0.4, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = tail;
+  ctx.beginPath(); ctx.arc(bx + 4, by + bh * 0.6, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(cx, by + bh * 0.65, bw * 0.38, bh * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + 4, by + bh * 0.35, bw * 0.28, bh * 0.25, 0.15, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx - 4, by + bh * 0.08, 5, 14, -0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + 8, by + bh * 0.06, 5, 14, 0.15, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = earInner;
+  ctx.beginPath(); ctx.ellipse(cx - 4, by + bh * 0.09, 2.5, 9, -0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + 8, by + bh * 0.07, 2.5, 9, 0.15, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = eye;
+  ctx.beginPath(); ctx.arc(cx + 10, by + bh * 0.3, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(cx + 11, by + bh * 0.28, 1.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = blush;
+  ctx.beginPath(); ctx.arc(cx + 16, by + bh * 0.37, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = leg;
+  ctx.beginPath(); ctx.roundRect(cx - 14, by + bh * 0.82 + legOff, 12, 14, 4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(cx - 4, by + bh * 0.82 - legOff, 12, 14, 4); ctx.fill();
+}
+
+function drawFox(ctx, bx, by, bw, bh, fc, running, jumping, p) {
+  p = p || {};
+  const body = p.body || "#e8640a", belly = p.belly || "#ffddc0", tailTip = p.tailTip || "#fff";
+  const earTip = p.earTip || "#1a0a00", nose = p.nose || "#1a0a00", leg = p.leg || "#c0500a";
+  const cx = bx + bw / 2;
+  const legOff = (running && !jumping) ? Math.sin(fc * 0.35) * 5 : 0;
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.beginPath(); ctx.ellipse(cx, by + bh + 1, bw * 0.4, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(bx + 3, by + bh * 0.65, 9, 18, 0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = tailTip;
+  ctx.beginPath(); ctx.ellipse(bx + 1, by + bh * 0.73, 5, 10, 0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(cx, by + bh * 0.65, bw * 0.37, bh * 0.29, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = belly;
+  ctx.beginPath(); ctx.ellipse(cx + 4, by + bh * 0.7, bw * 0.18, bh * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(cx + 3, by + bh * 0.34, bw * 0.27, bh * 0.24, 0.1, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = belly;
+  ctx.beginPath(); ctx.ellipse(cx + 13, by + bh * 0.4, 9, 7, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.moveTo(cx - 4, by + bh * 0.17); ctx.lineTo(cx - 13, by - 2); ctx.lineTo(cx + 2, by + bh * 0.12); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx + 6, by + bh * 0.14); ctx.lineTo(cx + 0, by - 4); ctx.lineTo(cx + 14, by + bh * 0.1); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = earTip;
+  ctx.beginPath(); ctx.moveTo(cx - 5, by + bh * 0.17); ctx.lineTo(cx - 12, by - 1); ctx.lineTo(cx, by + bh * 0.13); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx + 6, by + bh * 0.14); ctx.lineTo(cx + 1, by - 3); ctx.lineTo(cx + 13, by + bh * 0.11); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#222";
+  ctx.beginPath(); ctx.arc(cx + 8, by + bh * 0.28, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(cx + 9, by + bh * 0.26, 1.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = nose;
+  ctx.beginPath(); ctx.arc(cx + 18, by + bh * 0.37, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = leg;
+  ctx.beginPath(); ctx.roundRect(cx - 14, by + bh * 0.82 + legOff, 12, 14, 4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(cx - 4, by + bh * 0.82 - legOff, 12, 14, 4); ctx.fill();
+}
+
+function drawCat(ctx, bx, by, bw, bh, fc, running, jumping, p) {
+  p = p || {};
+  const body = p.body || "#b0b0b0", stripe = p.stripe || "#888", earInner = p.earInner || "#ffb6c1";
+  const eyeColor = p.eyeColor || "#6abf69", nose = p.nose || "#ff9999", leg = p.leg || "#999";
+  const tail = p.tail || body;
+  const cx = bx + bw / 2;
+  const legOff = (running && !jumping) ? Math.sin(fc * 0.35) * 5 : 0;
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.beginPath(); ctx.ellipse(cx, by + bh + 1, bw * 0.4, 5, 0, 0, Math.PI * 2); ctx.fill();
+  const tailSway = running ? Math.sin(fc * 0.2) * 0.4 : 0;
+  ctx.strokeStyle = tail; ctx.lineWidth = 5; ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(bx + 5, by + bh * 0.78);
+  ctx.bezierCurveTo(bx - 10, by + bh * 0.5, bx - 8 + tailSway * 15, by + bh * 0.15, bx + 5, by + bh * 0.05);
+  ctx.stroke();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(cx, by + bh * 0.65, bw * 0.37, bh * 0.29, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = stripe; ctx.lineWidth = 2;
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath(); ctx.moveTo(cx + i * 7, by + bh * 0.5); ctx.lineTo(cx + i * 6, by + bh * 0.62); ctx.stroke();
+  }
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(cx + 3, by + bh * 0.33, bw * 0.27, bh * 0.24, 0.1, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx - 3, by + bh * 0.18); ctx.lineTo(cx - 10, by + 1); ctx.lineTo(cx + 3, by + bh * 0.14); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx + 7, by + bh * 0.15); ctx.lineTo(cx + 2, by - 1); ctx.lineTo(cx + 15, by + bh * 0.11); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = earInner;
+  ctx.beginPath(); ctx.moveTo(cx - 4, by + bh * 0.17); ctx.lineTo(cx - 8, by + 3); ctx.lineTo(cx + 1, by + bh * 0.14); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx + 7, by + bh * 0.14); ctx.lineTo(cx + 4, by + 1); ctx.lineTo(cx + 12, by + bh * 0.12); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#222";
+  ctx.beginPath(); ctx.ellipse(cx + 8, by + bh * 0.28, 3.5, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = eyeColor;
+  ctx.beginPath(); ctx.ellipse(cx + 8, by + bh * 0.28, 2.5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#111";
+  ctx.beginPath(); ctx.ellipse(cx + 8, by + bh * 0.28, 0.9, 2.3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(cx + 9.5, by + bh * 0.26, 1, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#ccc"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx + 12, by + bh * 0.35); ctx.lineTo(cx + 22, by + bh * 0.33); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + 12, by + bh * 0.38); ctx.lineTo(cx + 22, by + bh * 0.41); ctx.stroke();
+  ctx.fillStyle = nose;
+  ctx.beginPath(); ctx.moveTo(cx + 13, by + bh * 0.35); ctx.lineTo(cx + 16, by + bh * 0.39); ctx.lineTo(cx + 10, by + bh * 0.39); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = leg;
+  ctx.beginPath(); ctx.roundRect(cx - 14, by + bh * 0.82 + legOff, 12, 14, 4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(cx - 4, by + bh * 0.82 - legOff, 12, 14, 4); ctx.fill();
+}
+
+function drawDog(ctx, bx, by, bw, bh, fc, running, jumping, p) {
+  p = p || {};
+  const body = p.body || "#e8a020", ear = p.ear || "#c8860a", muzzle = p.muzzle || "#f5d080";
+  const nose = p.nose || "#1a0a00", tongue = p.tongue || "#ff6b8a", leg = p.leg || "#c8860a";
+  const cx = bx + bw / 2;
+  const legOff = (running && !jumping) ? Math.sin(fc * 0.35) * 5 : 0;
+  const tailWag = running ? Math.sin(fc * 0.4) * 0.5 : 0.2;
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.beginPath(); ctx.ellipse(cx, by + bh + 1, bw * 0.4, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = ear; ctx.lineWidth = 6; ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(bx + 6, by + bh * 0.55);
+  ctx.bezierCurveTo(bx - 5, by + bh * 0.4, bx - 8 + tailWag * 20, by + bh * 0.15, bx + tailWag * 15, by + bh * 0.05);
+  ctx.stroke();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(cx, by + bh * 0.64, bw * 0.4, bh * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(cx + 4, by + bh * 0.33, bw * 0.3, bh * 0.27, 0.1, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = ear;
+  ctx.beginPath(); ctx.ellipse(cx - 8, by + bh * 0.43, 8, 14, 0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + 14, by + bh * 0.4, 8, 14, -0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = muzzle;
+  ctx.beginPath(); ctx.ellipse(cx + 11, by + bh * 0.4, 11, 8, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#222";
+  ctx.beginPath(); ctx.arc(cx + 7, by + bh * 0.27, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(cx + 8.5, by + bh * 0.25, 1.3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = nose;
+  ctx.beginPath(); ctx.ellipse(cx + 16, by + bh * 0.35, 4, 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = tongue;
+  ctx.beginPath(); ctx.arc(cx + 14, by + bh * 0.48, 5, 0, Math.PI); ctx.fill();
+  ctx.fillStyle = leg;
+  ctx.beginPath(); ctx.roundRect(cx - 14, by + bh * 0.82 + legOff, 12, 14, 4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(cx - 4, by + bh * 0.82 - legOff, 12, 14, 4); ctx.fill();
+}
+
+function drawFrog(ctx, bx, by, bw, bh, fc, running, jumping, p) {
+  p = p || {};
+  const body = p.body || "#3aaa3a", belly = p.belly || "#a8e6a8", leg = p.leg || "#2a8a2a";
+  const foot = p.foot || "#1a6a1a", mouth = p.mouth || "#1a6a1a";
+  const cx = bx + bw / 2;
+  const legOff = (running && !jumping) ? Math.sin(fc * 0.35) * 5 : 0;
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.beginPath(); ctx.ellipse(cx, by + bh + 1, bw * 0.42, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(cx, by + bh * 0.66, bw * 0.43, bh * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = belly;
+  ctx.beginPath(); ctx.ellipse(cx + 3, by + bh * 0.68, bw * 0.26, bh * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(cx + 2, by + bh * 0.4, bw * 0.32, bh * 0.26, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.arc(cx - 2, by + bh * 0.2, 9, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 12, by + bh * 0.18, 9, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = p.pupil || "#222";
+  ctx.beginPath(); ctx.arc(cx - 2, by + bh * 0.19, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 12, by + bh * 0.17, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(cx, by + bh * 0.17, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 14, by + bh * 0.15, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = mouth; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx + 5, by + bh * 0.5, 10, 0.2, Math.PI - 0.2); ctx.stroke();
+  ctx.fillStyle = leg;
+  ctx.beginPath(); ctx.roundRect(cx - 16, by + bh * 0.8 + legOff, 14, 16, 4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(cx - 2, by + bh * 0.8 - legOff, 14, 16, 4); ctx.fill();
+  ctx.fillStyle = foot;
+  ctx.beginPath(); ctx.roundRect(cx - 18, by + bh * 0.88 + legOff, 18, 6, 3); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(cx - 4, by + bh * 0.88 - legOff, 18, 6, 3); ctx.fill();
+}
+
+function drawBear(ctx, bx, by, bw, bh, fc, running, jumping, p) {
+  p = p || {};
+  const body = p.body || "#8B5E3C", belly = p.belly || "#d4a97a", nose = p.nose || "#1a0a00";
+  const leg = p.leg || "#6d4a2e", earInner = p.earInner || belly;
+  const cx = bx + bw / 2;
+  const legOff = (running && !jumping) ? Math.sin(fc * 0.35) * 5 : 0;
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.beginPath(); ctx.ellipse(cx, by + bh + 1, bw * 0.42, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(cx, by + bh * 0.64, bw * 0.42, bh * 0.32, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = belly;
+  ctx.beginPath(); ctx.ellipse(cx + 2, by + bh * 0.68, bw * 0.24, bh * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(cx + 2, by + bh * 0.34, bw * 0.32, bh * 0.28, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx - 8, by + bh * 0.1, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 12, by + bh * 0.08, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = earInner;
+  ctx.beginPath(); ctx.arc(cx - 8, by + bh * 0.1, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 12, by + bh * 0.08, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = belly;
+  ctx.beginPath(); ctx.ellipse(cx + 10, by + bh * 0.42, 11, 9, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#222";
+  ctx.beginPath(); ctx.arc(cx + 4, by + bh * 0.27, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(cx + 5.5, by + bh * 0.25, 1.3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = nose;
+  ctx.beginPath(); ctx.ellipse(cx + 10, by + bh * 0.38, 5, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = nose; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cx + 10, by + bh * 0.42); ctx.quadraticCurveTo(cx + 7, by + bh * 0.47, cx + 5, by + bh * 0.45); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + 10, by + bh * 0.42); ctx.quadraticCurveTo(cx + 14, by + bh * 0.47, cx + 16, by + bh * 0.45); ctx.stroke();
+  ctx.fillStyle = leg;
+  ctx.beginPath(); ctx.roundRect(cx - 15, by + bh * 0.81 + legOff, 13, 15, 4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(cx - 2, by + bh * 0.81 - legOff, 13, 15, 4); ctx.fill();
+}
+
+function drawPenguin(ctx, bx, by, bw, bh, fc, running, jumping, p) {
+  p = p || {};
+  const body = p.body || "#1a1a2e", belly = p.belly || "#f5f5f5", beak = p.beak || "#ff9900";
+  const feet = p.feet || "#ff9900", cheek = p.cheek || null;
+  const cx = bx + bw / 2;
+  const legOff = (running && !jumping) ? Math.sin(fc * 0.35) * 5 : 0;
+  const flipAngle = (running && !jumping) ? Math.sin(fc * 0.35) * 0.3 : 0;
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.beginPath(); ctx.ellipse(cx, by + bh + 1, bw * 0.38, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(cx, by + bh * 0.62, bw * 0.36, bh * 0.32, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = belly;
+  ctx.beginPath(); ctx.ellipse(cx + 2, by + bh * 0.65, bw * 0.22, bh * 0.24, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.save(); ctx.translate(bx + 6, by + bh * 0.52); ctx.rotate(flipAngle * 1.5);
+  ctx.beginPath(); ctx.ellipse(0, 0, 7, 18, 0.3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.translate(bx + bw - 6, by + bh * 0.52); ctx.rotate(-flipAngle * 1.5);
+  ctx.beginPath(); ctx.ellipse(0, 0, 7, 18, -0.3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.arc(cx + 1, by + bh * 0.28, bw * 0.26, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = belly;
+  ctx.beginPath(); ctx.ellipse(cx + 3, by + bh * 0.3, bw * 0.16, bh * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+  if (cheek) { ctx.fillStyle = cheek; ctx.beginPath(); ctx.ellipse(cx + 8, by + bh * 0.32, 4, 3, 0, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = "#222";
+  ctx.beginPath(); ctx.arc(cx + 6, by + bh * 0.24, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(cx + 7, by + bh * 0.23, 1.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = beak;
+  ctx.beginPath(); ctx.moveTo(cx + 12, by + bh * 0.3); ctx.lineTo(cx + 20, by + bh * 0.33); ctx.lineTo(cx + 12, by + bh * 0.36); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = feet;
+  ctx.beginPath(); ctx.roundRect(cx - 10, by + bh * 0.88 + legOff, 14, 8, 3); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(cx + 2, by + bh * 0.88 - legOff, 14, 8, 3); ctx.fill();
+}
+
+function drawHedgehog(ctx, bx, by, bw, bh, fc, running, jumping, p) {
+  p = p || {};
+  const spine = p.spine || "#6b4226", spineTip = p.spineTip || "#4a2e18", belly = p.belly || "#d4a97a";
+  const nose = p.nose || "#1a0a00", leg = p.leg || "#b07050";
+  const cx = bx + bw / 2;
+  const legOff = (running && !jumping) ? Math.sin(fc * 0.35) * 4 : 0;
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.beginPath(); ctx.ellipse(cx, by + bh + 1, bw * 0.42, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = spine;
+  ctx.beginPath(); ctx.arc(cx, by + bh * 0.55, bw * 0.42, Math.PI, 0); ctx.fill();
+  ctx.strokeStyle = spineTip; ctx.lineWidth = 2;
+  [-0.9, -0.7, -0.5, -0.3, -0.1, 0.1, 0.3, 0.5, 0.7, 0.9].forEach(t => {
+    const angle = t * Math.PI;
+    const r1 = bw * 0.42, r2 = r1 + 8;
+    ctx.beginPath();
+    ctx.moveTo(cx + r1 * Math.cos(angle), by + bh * 0.55 + r1 * Math.sin(angle));
+    ctx.lineTo(cx + r2 * Math.cos(angle), by + bh * 0.55 + r2 * Math.sin(angle));
+    ctx.stroke();
+  });
+  ctx.fillStyle = belly;
+  ctx.beginPath(); ctx.ellipse(cx + 4, by + bh * 0.68, bw * 0.28, bh * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + bw * 0.32, by + bh * 0.42, bw * 0.22, bh * 0.2, 0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#222";
+  ctx.beginPath(); ctx.arc(cx + bw * 0.4, by + bh * 0.36, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(cx + bw * 0.41, by + bh * 0.34, 1.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = nose;
+  ctx.beginPath(); ctx.arc(cx + bw * 0.5, by + bh * 0.42, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = leg;
+  ctx.beginPath(); ctx.roundRect(cx - 10, by + bh * 0.83 + legOff, 10, 12, 3); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(cx + 2, by + bh * 0.83 - legOff, 10, 12, 3); ctx.fill();
+}
+
+function drawPanda(ctx, bx, by, bw, bh, fc, running, jumping, p) {
+  p = p || {};
+  const body = p.body || "#f0f0f0", patch = p.patch || "#1a1a1a", nose = p.nose || "#1a1a1a";
+  const cx = bx + bw / 2;
+  const legOff = (running && !jumping) ? Math.sin(fc * 0.35) * 5 : 0;
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.beginPath(); ctx.ellipse(cx, by + bh + 1, bw * 0.42, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(cx, by + bh * 0.64, bw * 0.4, bh * 0.31, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = patch;
+  ctx.beginPath(); ctx.ellipse(bx + 7, by + bh * 0.62, 8, 16, 0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(bx + bw - 4, by + bh * 0.6, 8, 16, -0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.arc(cx + 1, by + bh * 0.3, bw * 0.27, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = patch;
+  ctx.beginPath(); ctx.arc(cx - 8, by + bh * 0.08, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 12, by + bh * 0.06, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx - 2, by + bh * 0.26, 7, 6, -0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + 9, by + bh * 0.25, 7, 6, 0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(cx - 1, by + bh * 0.26, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 9, by + bh * 0.25, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = patch;
+  ctx.beginPath(); ctx.arc(cx, by + bh * 0.27, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 10, by + bh * 0.26, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(cx + 1, by + bh * 0.25, 1, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 11, by + bh * 0.24, 1, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = nose;
+  ctx.beginPath(); ctx.ellipse(cx + 4, by + bh * 0.37, 4, 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = patch;
+  ctx.beginPath(); ctx.roundRect(cx - 14, by + bh * 0.82 + legOff, 12, 14, 4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(cx - 4, by + bh * 0.82 - legOff, 12, 14, 4); ctx.fill();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CHARACTER REGISTRY
+// ═══════════════════════════════════════════════════════════
+const CHARACTERS = [
+  // ── Bunny Group ──
+  { id: "bunny",         name: "Bunny",         emoji: "🐰", draw: drawBunny, price: 0,   group: "Bunny" },
+  { id: "lop",           name: "Lop",           emoji: "🐰", draw: drawBunny, price: 75,  group: "Bunny", palette: { body: "#e8d5c0", tail: "#f0e0d0", earInner: "#e8a0a0", leg: "#d0b8a0", blush: "#e8a0a0" } },
+  { id: "arctic_hare",   name: "Arctic Hare",   emoji: "🐰", draw: drawBunny, price: 120, group: "Bunny", palette: { body: "#ffffff", tail: "#f0f0f0", earInner: "#d0d0d0", leg: "#e8e8e8", blush: "#e0c0c0" } },
+  { id: "holland_lop",   name: "Holland Lop",   emoji: "🐰", draw: drawBunny, price: 100, group: "Bunny", palette: { body: "#c8a882", tail: "#e0d0b8", earInner: "#d4a080", leg: "#b89870", blush: "#d4a0a0" } },
+  { id: "angora",        name: "Angora",        emoji: "🐰", draw: drawBunny, price: 150, group: "Bunny", palette: { body: "#f8f0e8", tail: "#ffffff", earInner: "#f0c8d0", leg: "#e8d8d0", blush: "#f0b0b0" } },
+  { id: "dutch_bunny",   name: "Dutch",         emoji: "🐰", draw: drawBunny, price: 90,  group: "Bunny", palette: { body: "#2a2a2a", tail: "#ffffff", earInner: "#d08080", leg: "#1a1a1a", blush: "#c08080" } },
+  { id: "rex_bunny",     name: "Rex",           emoji: "🐰", draw: drawBunny, price: 100, group: "Bunny", palette: { body: "#8B4513", tail: "#d4a97a", earInner: "#c08060", leg: "#6d3a1a", blush: "#c09080" } },
+  { id: "lionhead",      name: "Lionhead",      emoji: "🐰", draw: drawBunny, price: 135, group: "Bunny", palette: { body: "#d4a030", tail: "#e8c060", earInner: "#e0a060", leg: "#c09020", blush: "#d0a080" } },
+  { id: "flemish",       name: "Flemish Giant",  emoji: "🐰", draw: drawBunny, price: 180, group: "Bunny", palette: { body: "#808080", tail: "#a0a0a0", earInner: "#c0a0a0", leg: "#606060", blush: "#b09090" } },
+  { id: "mini_rex",      name: "Mini Rex",      emoji: "🐰", draw: drawBunny, price: 120, group: "Bunny", palette: { body: "#1a1a2e", tail: "#404060", earInner: "#8080a0", leg: "#10102a", blush: "#9080a0" } },
+
+  // ── Fox Group ──
+  { id: "fox",           name: "Fox",           emoji: "🦊", draw: drawFox, price: 0,   group: "Fox" },
+  { id: "arctic_fox",    name: "Arctic Fox",    emoji: "🦊", draw: drawFox, price: 100, group: "Fox", palette: { body: "#f0f0f0", belly: "#ffffff", tailTip: "#e8e8e8", earTip: "#c0c0c0", leg: "#d8d8d8" } },
+  { id: "fennec",        name: "Fennec",        emoji: "🦊", draw: drawFox, price: 120, group: "Fox", palette: { body: "#f0d8a0", belly: "#fff0d0", tailTip: "#ffffff", earTip: "#d0b080", leg: "#d8c088" } },
+  { id: "silver_fox",    name: "Silver Fox",    emoji: "🦊", draw: drawFox, price: 150, group: "Fox", palette: { body: "#404040", belly: "#c0c0c0", tailTip: "#e0e0e0", earTip: "#1a1a1a", leg: "#2a2a2a" } },
+  { id: "marble_fox",    name: "Marble Fox",    emoji: "🦊", draw: drawFox, price: 180, group: "Fox", palette: { body: "#f8f8f8", belly: "#ffffff", tailTip: "#e0e0e0", earTip: "#1a1a1a", nose: "#333", leg: "#e0e0e0" } },
+  { id: "kit_fox",       name: "Kit Fox",       emoji: "🦊", draw: drawFox, price: 90,  group: "Fox", palette: { body: "#d4a060", belly: "#f0dcc0", tailTip: "#e8e0d0", earTip: "#a08040", leg: "#c09050" } },
+  { id: "gray_fox",      name: "Gray Fox",      emoji: "🦊", draw: drawFox, price: 100, group: "Fox", palette: { body: "#808088", belly: "#d0d0d0", tailTip: "#404040", earTip: "#2a2a2a", leg: "#606068" } },
+  { id: "swift_fox",     name: "Swift Fox",     emoji: "🦊", draw: drawFox, price: 100, group: "Fox", palette: { body: "#d0a050", belly: "#f8e8c0", tailTip: "#f0e0c0", earTip: "#806020", leg: "#b89040" } },
+  { id: "cross_fox",     name: "Cross Fox",     emoji: "🦊", draw: drawFox, price: 165, group: "Fox", palette: { body: "#8B4513", belly: "#d4a97a", tailTip: "#f0e0d0", earTip: "#1a1a1a", leg: "#6d3a1a" } },
+  { id: "red_fox",       name: "Red Fox",       emoji: "🦊", draw: drawFox, price: 75,  group: "Fox", palette: { body: "#cc3300", belly: "#ffd0b0", tailTip: "#ffffff", earTip: "#1a0a00", leg: "#a02800" } },
+
+  // ── Cat Group ──
+  { id: "cat",           name: "Cat",           emoji: "🐱", draw: drawCat, price: 0,   group: "Cat" },
+  { id: "siamese",       name: "Siamese",       emoji: "🐱", draw: drawCat, price: 100, group: "Cat", palette: { body: "#f0e8d8", stripe: "#8B7355", earInner: "#d4a0a0", eyeColor: "#4488cc", leg: "#8B7355", tail: "#8B7355" } },
+  { id: "black_cat",     name: "Black Cat",     emoji: "🐱", draw: drawCat, price: 90,  group: "Cat", palette: { body: "#1a1a1a", stripe: "#333", earInner: "#555", eyeColor: "#cccc00", leg: "#111", tail: "#1a1a1a" } },
+  { id: "ginger",        name: "Ginger",        emoji: "🐱", draw: drawCat, price: 90,  group: "Cat", palette: { body: "#e8840a", stripe: "#cc6600", earInner: "#f0a0a0", eyeColor: "#88aa44", leg: "#d07008", tail: "#e8840a" } },
+  { id: "calico",        name: "Calico",        emoji: "🐱", draw: drawCat, price: 135, group: "Cat", palette: { body: "#f0e0c8", stripe: "#e8640a", earInner: "#f0b0b0", eyeColor: "#88aa44", leg: "#333", tail: "#e8640a" } },
+  { id: "tuxedo",        name: "Tuxedo",        emoji: "🐱", draw: drawCat, price: 120, group: "Cat", palette: { body: "#1a1a1a", stripe: "#333", earInner: "#888", eyeColor: "#88cc44", leg: "#111", tail: "#1a1a1a", nose: "#ff8888" } },
+  { id: "persian",       name: "Persian",       emoji: "🐱", draw: drawCat, price: 180, group: "Cat", palette: { body: "#f8f0e8", stripe: "#e8d8c8", earInner: "#f0c0c0", eyeColor: "#cc8844", leg: "#e0d0c0", tail: "#f0e8e0" } },
+  { id: "tabby",         name: "Tabby",         emoji: "🐱", draw: drawCat, price: 75,  group: "Cat", palette: { body: "#a08050", stripe: "#6d4c30", earInner: "#d0a080", eyeColor: "#88aa44", leg: "#806030", tail: "#a08050" } },
+  { id: "russian_blue",  name: "Russian Blue",  emoji: "🐱", draw: drawCat, price: 165, group: "Cat", palette: { body: "#6688aa", stripe: "#507090", earInner: "#8090a0", eyeColor: "#44cc44", leg: "#506880", tail: "#6688aa" } },
+  { id: "sphynx",        name: "Sphynx",        emoji: "🐱", draw: drawCat, price: 210, group: "Cat", palette: { body: "#e0c0a8", stripe: "#d0b098", earInner: "#e0a0a0", eyeColor: "#44aacc", leg: "#d0b090", tail: "#d8b8a0" } },
+
+  // ── Dog Group ──
+  { id: "dog",           name: "Dog",           emoji: "🐶", draw: drawDog, price: 0,   group: "Dog" },
+  { id: "dalmatian",     name: "Dalmatian",     emoji: "🐶", draw: drawDog, price: 120, group: "Dog", palette: { body: "#f0f0f0", ear: "#1a1a1a", muzzle: "#e8e0d8", leg: "#e0e0e0" } },
+  { id: "husky",         name: "Husky",         emoji: "🐶", draw: drawDog, price: 150, group: "Dog", palette: { body: "#808898", ear: "#505868", muzzle: "#f0e8e0", leg: "#606878" } },
+  { id: "corgi",         name: "Corgi",         emoji: "🐶", draw: drawDog, price: 135, group: "Dog", palette: { body: "#e8a020", ear: "#d09018", muzzle: "#ffffff", leg: "#d09018" } },
+  { id: "poodle",        name: "Poodle",        emoji: "🐶", draw: drawDog, price: 165, group: "Dog", palette: { body: "#f0e8e0", ear: "#e0d0c0", muzzle: "#f8f0e8", leg: "#e0d0c0" } },
+  { id: "shiba",         name: "Shiba",         emoji: "🐶", draw: drawDog, price: 150, group: "Dog", palette: { body: "#d4841a", ear: "#c07818", muzzle: "#ffffff", leg: "#c07818" } },
+  { id: "beagle",        name: "Beagle",        emoji: "🐶", draw: drawDog, price: 100, group: "Dog", palette: { body: "#c09040", ear: "#6B3A1a", muzzle: "#f0e0d0", leg: "#6B3A1a" } },
+  { id: "rottweiler",    name: "Rottweiler",    emoji: "🐶", draw: drawDog, price: 180, group: "Dog", palette: { body: "#1a1a1a", ear: "#111", muzzle: "#a07040", leg: "#111" } },
+  { id: "labrador",      name: "Labrador",      emoji: "🐶", draw: drawDog, price: 120, group: "Dog", palette: { body: "#d4a040", ear: "#c09030", muzzle: "#e8c880", leg: "#c09030" } },
+  { id: "chihuahua",     name: "Chihuahua",     emoji: "🐶", draw: drawDog, price: 100, group: "Dog", palette: { body: "#d4a060", ear: "#c09050", muzzle: "#f0dcc0", leg: "#c09050" } },
+
+  // ── Frog Group ──
+  { id: "frog",          name: "Frog",          emoji: "🐸", draw: drawFrog, price: 0,   group: "Frog" },
+  { id: "tree_frog",     name: "Tree Frog",     emoji: "🐸", draw: drawFrog, price: 90,  group: "Frog", palette: { body: "#44cc44", belly: "#c0f0c0", leg: "#38aa38", foot: "#2a8a2a" } },
+  { id: "poison_dart",   name: "Poison Dart",   emoji: "🐸", draw: drawFrog, price: 180, group: "Frog", palette: { body: "#2244ee", belly: "#4488ff", leg: "#1a30cc", foot: "#1020aa", pupil: "#111" } },
+  { id: "bullfrog",      name: "Bullfrog",      emoji: "🐸", draw: drawFrog, price: 100, group: "Frog", palette: { body: "#2a7a2a", belly: "#90c890", leg: "#1a6a1a", foot: "#105a10" } },
+  { id: "tomato_frog",   name: "Tomato",        emoji: "🐸", draw: drawFrog, price: 150, group: "Frog", palette: { body: "#e83030", belly: "#f0a080", leg: "#cc2020", foot: "#aa1818" } },
+  { id: "glass_frog",    name: "Glass Frog",    emoji: "🐸", draw: drawFrog, price: 165, group: "Frog", palette: { body: "#80e8a0", belly: "#c0f8d8", leg: "#60c880", foot: "#40b060" } },
+  { id: "pacman_frog",   name: "Pacman",        emoji: "🐸", draw: drawFrog, price: 135, group: "Frog", palette: { body: "#c8a020", belly: "#e8d888", leg: "#a88018", foot: "#887010" } },
+  { id: "blue_dart",     name: "Blue Dart",     emoji: "🐸", draw: drawFrog, price: 195, group: "Frog", palette: { body: "#0088cc", belly: "#40b0e8", leg: "#0070aa", foot: "#006090", pupil: "#111" } },
+  { id: "golden_frog",   name: "Golden",        emoji: "🐸", draw: drawFrog, price: 210, group: "Frog", palette: { body: "#ffd700", belly: "#ffec80", leg: "#e0c000", foot: "#c8a800" } },
+  { id: "redeyed_frog",  name: "Red-Eyed",      emoji: "🐸", draw: drawFrog, price: 165, group: "Frog", palette: { body: "#30aa30", belly: "#a0e8a0", leg: "#208820", foot: "#107010", pupil: "#cc0000" } },
+
+  // ── Bear Group ──
+  { id: "bear",          name: "Bear",          emoji: "🐻", draw: drawBear, price: 0,   group: "Bear" },
+  { id: "polar_bear",    name: "Polar Bear",    emoji: "🐻", draw: drawBear, price: 120, group: "Bear", palette: { body: "#f0f0f0", belly: "#ffffff", leg: "#d8d8d8", nose: "#1a1a1a" } },
+  { id: "black_bear",    name: "Black Bear",    emoji: "🐻", draw: drawBear, price: 100, group: "Bear", palette: { body: "#1a1a1a", belly: "#4a3a2a", leg: "#111", nose: "#333" } },
+  { id: "grizzly",       name: "Grizzly",       emoji: "🐻", draw: drawBear, price: 150, group: "Bear", palette: { body: "#7a5030", belly: "#c09060", leg: "#5a3820", nose: "#1a0a00" } },
+  { id: "sun_bear",      name: "Sun Bear",      emoji: "🐻", draw: drawBear, price: 165, group: "Bear", palette: { body: "#1a1a1a", belly: "#ffd700", leg: "#111", nose: "#333" } },
+  { id: "kodiak",        name: "Kodiak",        emoji: "🐻", draw: drawBear, price: 180, group: "Bear", palette: { body: "#6a4020", belly: "#b08050", leg: "#4a2a10", nose: "#1a0a00" } },
+  { id: "kermode",       name: "Kermode",       emoji: "🐻", draw: drawBear, price: 210, group: "Bear", palette: { body: "#f8f0e0", belly: "#ffffff", leg: "#e0d8c8", nose: "#8B5E3C" } },
+  { id: "sloth_bear",    name: "Sloth Bear",    emoji: "🐻", draw: drawBear, price: 135, group: "Bear", palette: { body: "#2a2a2a", belly: "#f0e8c0", leg: "#1a1a1a", nose: "#444" } },
+  { id: "moon_bear",     name: "Moon Bear",     emoji: "🐻", draw: drawBear, price: 150, group: "Bear", palette: { body: "#1a1a1a", belly: "#f0f0f0", leg: "#111", nose: "#333" } },
+  { id: "honey_bear",    name: "Honey Bear",    emoji: "🐻", draw: drawBear, price: 120, group: "Bear", palette: { body: "#c89030", belly: "#f0d888", leg: "#a87820", nose: "#6d4a2e" } },
+
+  // ── Penguin Group ──
+  { id: "penguin",       name: "Penguin",       emoji: "🐧", draw: drawPenguin, price: 0,   group: "Penguin" },
+  { id: "emperor",       name: "Emperor",       emoji: "🐧", draw: drawPenguin, price: 150, group: "Penguin", palette: { body: "#1a1a2e", belly: "#f5f5f5", beak: "#ff8800", feet: "#333", cheek: "#ffd700" } },
+  { id: "rockhopper",    name: "Rockhopper",    emoji: "🐧", draw: drawPenguin, price: 165, group: "Penguin", palette: { body: "#1a1a1a", belly: "#f0f0f0", beak: "#cc3300", feet: "#ff6600", cheek: "#ffdd00" } },
+  { id: "fairy_penguin", name: "Fairy",         emoji: "🐧", draw: drawPenguin, price: 135, group: "Penguin", palette: { body: "#4466aa", belly: "#f8f8f8", beak: "#555", feet: "#444" } },
+  { id: "gentoo",        name: "Gentoo",        emoji: "🐧", draw: drawPenguin, price: 120, group: "Penguin", palette: { body: "#1a1a2e", belly: "#ffffff", beak: "#ff6600", feet: "#ff8800" } },
+  { id: "chinstrap",     name: "Chinstrap",     emoji: "🐧", draw: drawPenguin, price: 100, group: "Penguin", palette: { body: "#1a1a1a", belly: "#ffffff", beak: "#333", feet: "#ff8800" } },
+  { id: "macaroni",      name: "Macaroni",      emoji: "🐧", draw: drawPenguin, price: 180, group: "Penguin", palette: { body: "#1a1a1a", belly: "#f0f0f0", beak: "#ff6600", feet: "#ff6600", cheek: "#ffcc00" } },
+  { id: "adelie",        name: "Adelie",        emoji: "🐧", draw: drawPenguin, price: 90,  group: "Penguin", palette: { body: "#1a1a2e", belly: "#ffffff", beak: "#222", feet: "#333" } },
+  { id: "king_penguin",  name: "King",          emoji: "🐧", draw: drawPenguin, price: 195, group: "Penguin", palette: { body: "#2a2a3e", belly: "#f8f8f8", beak: "#ff8800", feet: "#333", cheek: "#ffaa00" } },
+  { id: "african",       name: "African",       emoji: "🐧", draw: drawPenguin, price: 120, group: "Penguin", palette: { body: "#1a1a1a", belly: "#f0f0f0", beak: "#444", feet: "#555", cheek: "#ff8888" } },
+
+  // ── Hedgehog Group ──
+  { id: "hedgehog",      name: "Hedgehog",      emoji: "🦔", draw: drawHedgehog, price: 0,   group: "Hedgehog" },
+  { id: "albino_hedge",  name: "Albino",        emoji: "🦔", draw: drawHedgehog, price: 135, group: "Hedgehog", palette: { spine: "#f0e8e0", spineTip: "#e0d0c0", belly: "#ffffff", leg: "#f0e0d0", nose: "#ff8888" } },
+  { id: "cinnamon_hedge",name: "Cinnamon",      emoji: "🦔", draw: drawHedgehog, price: 90,  group: "Hedgehog", palette: { spine: "#a06830", spineTip: "#805020", belly: "#e8c8a0", leg: "#c08848" } },
+  { id: "pinto_hedge",   name: "Pinto",         emoji: "🦔", draw: drawHedgehog, price: 120, group: "Hedgehog", palette: { spine: "#f0e8e0", spineTip: "#6b4226", belly: "#f8f0e8", leg: "#d0b898" } },
+  { id: "choco_hedge",   name: "Chocolate",     emoji: "🦔", draw: drawHedgehog, price: 100, group: "Hedgehog", palette: { spine: "#4a2a10", spineTip: "#2a1808", belly: "#c09060", leg: "#8B5E3C" } },
+  { id: "algerian",      name: "Algerian",      emoji: "🦔", draw: drawHedgehog, price: 150, group: "Hedgehog", palette: { spine: "#5a3a1a", spineTip: "#3a2010", belly: "#e0c8a0", leg: "#a07848" } },
+  { id: "four_toed",     name: "Four-Toed",     emoji: "🦔", draw: drawHedgehog, price: 100, group: "Hedgehog", palette: { spine: "#7a5a38", spineTip: "#5a3a20", belly: "#d8c0a0", leg: "#a88060" } },
+  { id: "long_eared",    name: "Long-Eared",    emoji: "🦔", draw: drawHedgehog, price: 120, group: "Hedgehog", palette: { spine: "#806040", spineTip: "#604028", belly: "#e0c898", leg: "#b09060" } },
+  { id: "indian_hedge",  name: "Indian",        emoji: "🦔", draw: drawHedgehog, price: 135, group: "Hedgehog", palette: { spine: "#5a4030", spineTip: "#3a2818", belly: "#c8a878", leg: "#8a6848" } },
+  { id: "salt_pepper",   name: "Salt & Pepper", emoji: "🦔", draw: drawHedgehog, price: 150, group: "Hedgehog", palette: { spine: "#888888", spineTip: "#555555", belly: "#e0d8d0", leg: "#a0a0a0" } },
+
+  // ── Panda Group ──
+  { id: "panda",         name: "Panda",         emoji: "🐼", draw: drawPanda, price: 0,   group: "Panda" },
+  { id: "red_panda",     name: "Red Panda",     emoji: "🐼", draw: drawPanda, price: 150, group: "Panda", palette: { body: "#cc4400", patch: "#4a2a10", nose: "#1a1a1a" } },
+  { id: "qinling",       name: "Qinling",       emoji: "🐼", draw: drawPanda, price: 210, group: "Panda", palette: { body: "#f0e8d8", patch: "#6B4226", nose: "#5a3a1a" } },
+  { id: "baby_panda",    name: "Baby",          emoji: "🐼", draw: drawPanda, price: 120, group: "Panda", palette: { body: "#f8f0f0", patch: "#333", nose: "#222" } },
+  { id: "brown_panda",   name: "Brown Panda",   emoji: "🐼", draw: drawPanda, price: 165, group: "Panda", palette: { body: "#f0e0c8", patch: "#8B5E3C", nose: "#6d4a2e" } },
+  { id: "albino_panda",  name: "Albino",        emoji: "🐼", draw: drawPanda, price: 195, group: "Panda", palette: { body: "#ffffff", patch: "#e0d0d0", nose: "#d0b0b0" } },
+  { id: "giant_panda",   name: "Giant",         emoji: "🐼", draw: drawPanda, price: 135, group: "Panda", palette: { body: "#e8e8e8", patch: "#0a0a0a", nose: "#0a0a0a" } },
+  { id: "golden_panda",  name: "Golden",        emoji: "🐼", draw: drawPanda, price: 250, group: "Panda", palette: { body: "#f8f0d0", patch: "#d4a030", nose: "#c09020" } },
+  { id: "cinnamon_panda",name: "Cinnamon",      emoji: "🐼", draw: drawPanda, price: 165, group: "Panda", palette: { body: "#f0e8e0", patch: "#a06830", nose: "#805020" } },
+  { id: "himalayan_panda",name: "Himalayan",    emoji: "🐼", draw: drawPanda, price: 180, group: "Panda", palette: { body: "#f0f0f8", patch: "#2a2a40", nose: "#1a1a30" } },
+
+  // ── Seasonal Skins ──
+  { id: "santa_bunny",      name: "Santa Bunny",      emoji: "🐰", draw: drawBunny,    price: 200, group: "Seasonal", palette: { body: "#cc2222", tail: "#ffffff", earInner: "#ff6666", leg: "#aa1818", blush: "#ff8888", eye: "#222" } },
+  { id: "pumpkin_frog",     name: "Pumpkin Frog",     emoji: "🐸", draw: drawFrog,     price: 200, group: "Seasonal", palette: { body: "#e87820", belly: "#ffaa44", leg: "#cc6010", foot: "#aa4808", pupil: "#111" } },
+  { id: "valentine_cat",    name: "Valentine Cat",    emoji: "🐱", draw: drawCat,      price: 180, group: "Seasonal", palette: { body: "#e85080", stripe: "#cc3060", earInner: "#ff88aa", eyeColor: "#cc2255", leg: "#d04070", tail: "#e85080", nose: "#ff6688" } },
+  { id: "patriot_dog",      name: "Patriot Dog",      emoji: "🐶", draw: drawDog,      price: 180, group: "Seasonal", palette: { body: "#2255aa", ear: "#cc2233", muzzle: "#f0f0f0", leg: "#cc2233" } },
+  { id: "spring_hedgehog",  name: "Spring Hedgehog",  emoji: "🦔", draw: drawHedgehog, price: 150, group: "Seasonal", palette: { spine: "#88cc88", spineTip: "#66aa66", belly: "#ffe0f0", leg: "#aaddaa", nose: "#ff9999" } },
+  { id: "snowflake_penguin",name: "Snowflake Penguin",emoji: "🐧", draw: drawPenguin,  price: 180, group: "Seasonal", palette: { body: "#4488bb", belly: "#e8f4ff", beak: "#88bbdd", feet: "#6699bb", cheek: "#c0ddee" } },
+];
+const unlockedChars = new Set(["bunny"]);
+
+let selectedCharId = "bunny";
+const getChar = () => CHARACTERS.find(c => c.id === selectedCharId);
+
+// ═══════════════════════════════════════════════════════════
+//  HAT DRAW FUNCTIONS & REGISTRY
+// ═══════════════════════════════════════════════════════════
+function drawCrownHat(ctx, x, y, w) {
+  const cx = x + w / 2;
+  const top = y - 16;
+  ctx.fillStyle = "#ffd700";
+  ctx.beginPath();
+  ctx.moveTo(cx - 14, y - 2);
+  ctx.lineTo(cx - 14, top + 4);
+  ctx.lineTo(cx - 8, top + 8);
+  ctx.lineTo(cx - 2, top);
+  ctx.lineTo(cx + 4, top + 8);
+  ctx.lineTo(cx + 10, top);
+  ctx.lineTo(cx + 14, top + 8);
+  ctx.lineTo(cx + 14, y - 2);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#e6c200";
+  ctx.fillRect(cx - 14, y - 4, 28, 3);
+  // gems
+  ctx.fillStyle = "#e53935"; ctx.beginPath(); ctx.arc(cx - 6, y - 6, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#2196f3"; ctx.beginPath(); ctx.arc(cx + 6, y - 6, 2, 0, Math.PI * 2); ctx.fill();
+}
+function drawTopHat(ctx, x, y, w) {
+  const cx = x + w / 2;
+  ctx.fillStyle = "#1a1a1a";
+  ctx.fillRect(cx - 10, y - 22, 20, 18);
+  ctx.fillRect(cx - 16, y - 6, 32, 5);
+  ctx.fillStyle = "#c62828";
+  ctx.fillRect(cx - 10, y - 8, 20, 3);
+}
+function drawCapHat(ctx, x, y, w) {
+  const cx = x + w / 2;
+  ctx.fillStyle = "#1565c0";
+  ctx.beginPath(); ctx.arc(cx, y - 2, 14, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = "#0d47a1";
+  ctx.beginPath();
+  ctx.moveTo(cx + 8, y - 4);
+  ctx.lineTo(cx + 22, y - 1);
+  ctx.lineTo(cx + 20, y + 2);
+  ctx.lineTo(cx + 8, y);
+  ctx.closePath(); ctx.fill();
+}
+function drawPartyHat(ctx, x, y, w) {
+  const cx = x + w / 2;
+  ctx.fillStyle = "#e91e63";
+  ctx.beginPath();
+  ctx.moveTo(cx, y - 22);
+  ctx.lineTo(cx - 12, y - 2);
+  ctx.lineTo(cx + 12, y - 2);
+  ctx.closePath(); ctx.fill();
+  // stripes
+  ctx.fillStyle = "#ffd54f";
+  ctx.beginPath();
+  ctx.moveTo(cx - 4, y - 16);
+  ctx.lineTo(cx - 8, y - 8);
+  ctx.lineTo(cx + 4, y - 8);
+  ctx.lineTo(cx + 2, y - 16);
+  ctx.closePath(); ctx.fill();
+  // pom-pom
+  ctx.fillStyle = "#ffeb3b";
+  ctx.beginPath(); ctx.arc(cx, y - 22, 4, 0, Math.PI * 2); ctx.fill();
+}
+function drawBowHat(ctx, x, y, w) {
+  const cx = x + w / 2;
+  ctx.fillStyle = "#e91e63";
+  // left loop
+  ctx.beginPath(); ctx.ellipse(cx - 8, y - 6, 8, 5, -0.2, 0, Math.PI * 2); ctx.fill();
+  // right loop
+  ctx.beginPath(); ctx.ellipse(cx + 8, y - 6, 8, 5, 0.2, 0, Math.PI * 2); ctx.fill();
+  // center knot
+  ctx.fillStyle = "#c2185b";
+  ctx.beginPath(); ctx.arc(cx, y - 6, 3, 0, Math.PI * 2); ctx.fill();
+  // tails
+  ctx.fillStyle = "#e91e63";
+  ctx.beginPath(); ctx.moveTo(cx - 2, y - 3); ctx.lineTo(cx - 6, y + 4); ctx.lineTo(cx, y - 1); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx + 2, y - 3); ctx.lineTo(cx + 6, y + 4); ctx.lineTo(cx, y - 1); ctx.fill();
+}
+function drawHaloHat(ctx, x, y, w) {
+  const cx = x + w / 2;
+  ctx.strokeStyle = "#ffd700";
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.ellipse(cx, y - 10, 14, 4, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = "rgba(255,215,0,0.4)";
+  ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.ellipse(cx, y - 10, 14, 4, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.lineWidth = 1;
+}
+
+const HATS = [
+  { id: "crown",  name: "Crown",     emoji: "👑", price: 50, draw: drawCrownHat },
+  { id: "tophat", name: "Top Hat",    emoji: "🎩", price: 40, draw: drawTopHat },
+  { id: "cap",    name: "Cap",        emoji: "🧢", price: 30, draw: drawCapHat },
+  { id: "party",  name: "Party Hat",  emoji: "🥳", price: 30, draw: drawPartyHat },
+  { id: "bow",    name: "Bow",        emoji: "🎀", price: 25, draw: drawBowHat },
+  { id: "halo",   name: "Halo",       emoji: "😇", price: 40, draw: drawHaloHat },
+];
+
+const unlockedHats = new Set();
+let selectedHatId = null;
+const getHat = () => selectedHatId ? HATS.find(h => h.id === selectedHatId) : null;
+
+// ═══════════════════════════════════════════════════════════
+//  MISSIONS
+// ═══════════════════════════════════════════════════════════
+const MISSIONS = [
+  { id: "coins20",   name: "Coin Collector", desc: "Collect 20 coins total",       goal: 20, reward: 10, key: "totalCoins" },
+  { id: "coins50",   name: "High Roller",    desc: "Collect 50 coins total",       goal: 50, reward: 15, key: "totalCoins" },
+  { id: "score500",  name: "Speedy",         desc: "Score 500 in one run",         goal: 500, reward: 10, key: "bestScore" },
+  { id: "score1000", name: "Marathon",        desc: "Score 1000 in one run",        goal: 1000, reward: 20, key: "bestScore" },
+  { id: "duck10",    name: "Duck Master",    desc: "Duck under 10 air obstacles",  goal: 10, reward: 10, key: "totalDucks" },
+  { id: "chars3",    name: "Shopaholic",     desc: "Unlock 3 characters",          goal: 3,  reward: 15, key: "unlockedCharCount" },
+];
+
+let missionProgress = { totalCoins: 0, bestScore: 0, totalDucks: 0, unlockedCharCount: 1 };
+let completedMissions = new Set();
+
+// ═══════════════════════════════════════════════════════════
+//  PARTICLES
+// ═══════════════════════════════════════════════════════════
+let particles = [];
+
+function spawnParticles(x, y, color, count) {
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 4,
+      vy: (Math.random() - 0.8) * 4,
+      life: 20 + Math.random() * 20,
+      maxLife: 20 + Math.random() * 20,
+      color,
+      r: 1.5 + Math.random() * 2,
+    });
+    particles[particles.length - 1].maxLife = particles[particles.length - 1].life;
+  }
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.1;
+    p.life--;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    const alpha = p.life / p.maxLife;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BACKGROUND REGISTRY
+// ═══════════════════════════════════════════════════════════
+const BACKGROUNDS = [
+  {
+    id: "playground", name: "Playground", emoji: "🛝", price: 0,
+    obstacleTypes: [
+      { type: "slide",   minH: 34, maxH: 52, minW: 30, maxW: 42 },
+      { type: "swing",   minH: 36, maxH: 54, minW: 28, maxW: 38 },
+      { type: "castle",  minH: 28, maxH: 42, minW: 28, maxW: 40 },
+    ],
+    drawSky(ctx, W, groundTop, sx) {
+      const g = ctx.createLinearGradient(0, 0, 0, groundTop);
+      g.addColorStop(0, "#4fc3f7"); g.addColorStop(1, "#b3e5fc");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, groundTop);
+      // scrolling clouds
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
+      const cOff = sx * 0.15;
+      [{ bx: 150, y: 40, rw: 45, rh: 15 }, { bx: 450, y: 30, rw: 35, rh: 12 }, { bx: 700, y: 50, rw: 40, rh: 14 }].forEach(c => {
+        const cx = ((c.bx - cOff) % (W + 100) + W + 100) % (W + 100) - 50;
+        ctx.beginPath(); ctx.ellipse(cx, c.y, c.rw, c.rh, 0, 0, Math.PI * 2); ctx.fill();
+      });
+    },
+    drawGround(ctx, W, H, groundTop, ph, sx) {
+      ctx.fillStyle = "#8d4925";
+      ctx.fillRect(0, groundTop + ph, W, H - groundTop - ph);
+      ctx.fillStyle = "#a0522d";
+      ctx.fillRect(0, groundTop + ph - 4, W, 4);
+      // scrolling mulch texture
+      ctx.fillStyle = "#7a3b1e";
+      const gOff = sx % 18;
+      for (let i = -18; i < W + 18; i += 18) {
+        const x = i - gOff;
+        ctx.fillRect(x + (Math.abs(i) * 7 % 11), groundTop + ph + 6, 4, 2);
+        ctx.fillRect(x + 5 + (Math.abs(i) * 3 % 9), groundTop + ph + 16, 3, 2);
+      }
+    },
+    drawScenery(ctx, W, groundTop, ph, fc, sx) {
+      // scrolling scenery at parallax rate
+      const period = 400;
+      const sOff = (sx * 0.3) % period;
+      // swing set
+      const swX = ((650 - sOff) % period + period) % period + W - period + 50;
+      ctx.strokeStyle = "#666"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(swX - 30, groundTop - 10); ctx.lineTo(swX - 20, groundTop + ph); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(swX + 30, groundTop - 10); ctx.lineTo(swX + 20, groundTop + ph); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(swX - 35, groundTop - 10); ctx.lineTo(swX + 35, groundTop - 10); ctx.stroke();
+      const swingOff = Math.sin(fc * 0.04) * 8;
+      ctx.strokeStyle = "#888"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(swX, groundTop - 10); ctx.lineTo(swX + swingOff, groundTop + ph - 16); ctx.stroke();
+      ctx.fillStyle = "#333";
+      ctx.fillRect(swX - 6 + swingOff, groundTop + ph - 18, 14, 4);
+      // slide
+      const slX = ((850 - sOff) % period + period) % period + W - period + 50;
+      ctx.fillStyle = "#e53935";
+      ctx.beginPath(); ctx.moveTo(slX - 20, groundTop - 20); ctx.lineTo(slX + 20, groundTop + ph); ctx.lineTo(slX + 14, groundTop + ph); ctx.lineTo(slX - 26, groundTop - 20); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#666";
+      ctx.fillRect(slX - 23, groundTop - 20, 3, groundTop + ph - (groundTop - 20));
+    },
+    drawObstacle(ctx, o) {
+      if (o.obsType === "slide") {
+        // mini playground slide
+        // ladder (left side)
+        ctx.strokeStyle = "#666"; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(o.x + 4, o.y); ctx.lineTo(o.x + 4, o.y + o.h); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(o.x + 12, o.y); ctx.lineTo(o.x + 12, o.y + o.h); ctx.stroke();
+        // ladder rungs
+        for (let i = 0.2; i < 1; i += 0.25) {
+          ctx.beginPath(); ctx.moveTo(o.x + 4, o.y + o.h * i); ctx.lineTo(o.x + 12, o.y + o.h * i); ctx.stroke();
+        }
+        // platform at top
+        ctx.fillStyle = "#e53935";
+        ctx.fillRect(o.x + 2, o.y - 2, o.w * 0.6, 4);
+        // slide surface (angled)
+        ctx.fillStyle = "#e53935";
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.55, o.y - 2);
+        ctx.lineTo(o.x + o.w, o.y + o.h);
+        ctx.lineTo(o.x + o.w - 6, o.y + o.h);
+        ctx.lineTo(o.x + o.w * 0.55 - 6, o.y - 2);
+        ctx.closePath(); ctx.fill();
+        // slide rail highlight
+        ctx.strokeStyle = "#ef5350"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(o.x + o.w * 0.55, o.y - 1); ctx.lineTo(o.x + o.w, o.y + o.h); ctx.stroke();
+      } else if (o.obsType === "swing") {
+        // mini swing set A-frame
+        const cx = o.x + o.w / 2;
+        // A-frame legs
+        ctx.strokeStyle = "#555"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(cx, o.y); ctx.lineTo(o.x + 2, o.y + o.h); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx, o.y); ctx.lineTo(o.x + o.w - 2, o.y + o.h); ctx.stroke();
+        // top bar
+        ctx.beginPath(); ctx.moveTo(o.x, o.y + 2); ctx.lineTo(o.x + o.w, o.y + 2); ctx.stroke();
+        // chain/rope
+        ctx.strokeStyle = "#888"; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(cx, o.y + 2); ctx.lineTo(cx - 4, o.y + o.h * 0.65); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx, o.y + 2); ctx.lineTo(cx + 4, o.y + o.h * 0.65); ctx.stroke();
+        // seat
+        ctx.fillStyle = "#1565c0";
+        ctx.fillRect(cx - 8, o.y + o.h * 0.63, 16, 4);
+      } else {
+        // sandbox castle
+        ctx.fillStyle = "#f4d03f";
+        // base mound
+        ctx.beginPath(); ctx.roundRect(o.x + 2, o.y + o.h * 0.5, o.w - 4, o.h * 0.5, [0, 0, 4, 4]); ctx.fill();
+        // center tower
+        ctx.fillRect(o.x + o.w * 0.3, o.y + o.h * 0.1, o.w * 0.4, o.h * 0.5);
+        // battlements on center tower
+        ctx.fillRect(o.x + o.w * 0.28, o.y + o.h * 0.05, o.w * 0.12, o.h * 0.15);
+        ctx.fillRect(o.x + o.w * 0.6, o.y + o.h * 0.05, o.w * 0.12, o.h * 0.15);
+        // side turrets
+        ctx.fillRect(o.x + 2, o.y + o.h * 0.3, o.w * 0.2, o.h * 0.3);
+        ctx.fillRect(o.x + o.w * 0.78, o.y + o.h * 0.3, o.w * 0.2, o.h * 0.3);
+        // turret tops
+        ctx.beginPath(); ctx.moveTo(o.x + 2, o.y + o.h * 0.3); ctx.lineTo(o.x + o.w * 0.12, o.y + o.h * 0.18); ctx.lineTo(o.x + o.w * 0.22, o.y + o.h * 0.3); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(o.x + o.w * 0.78, o.y + o.h * 0.3); ctx.lineTo(o.x + o.w * 0.88, o.y + o.h * 0.18); ctx.lineTo(o.x + o.w * 0.98, o.y + o.h * 0.3); ctx.fill();
+        // door
+        ctx.fillStyle = "#c9a933";
+        ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y + o.h * 0.55, o.w * 0.1, Math.PI, 0); ctx.fill();
+        ctx.fillRect(o.x + o.w / 2 - o.w * 0.1, o.y + o.h * 0.55, o.w * 0.2, o.h * 0.15);
+        // flag on top
+        ctx.strokeStyle = "#795548"; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(o.x + o.w / 2, o.y + o.h * 0.1); ctx.lineTo(o.x + o.w / 2, o.y - 4); ctx.stroke();
+        ctx.fillStyle = "#e53935";
+        ctx.beginPath(); ctx.moveTo(o.x + o.w / 2, o.y - 4); ctx.lineTo(o.x + o.w / 2 + 8, o.y - 1); ctx.lineTo(o.x + o.w / 2, o.y + 2); ctx.fill();
+      }
+    },
+  },
+  {
+    id: "forest", name: "Forest", emoji: "🌲", price: 40,
+    obstacleTypes: [
+      { type: "stump",    minH: 26, maxH: 40, minW: 28, maxW: 40 },
+      { type: "mushroom", minH: 28, maxH: 44, minW: 24, maxW: 34 },
+      { type: "boulder",  minH: 24, maxH: 38, minW: 28, maxW: 42 },
+    ],
+    drawSky(ctx, W, groundTop, sx) {
+      const g = ctx.createLinearGradient(0, 0, 0, groundTop);
+      g.addColorStop(0, "#2e7d32"); g.addColorStop(0.4, "#4caf50"); g.addColorStop(1, "#81c784");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, groundTop);
+      // scrolling canopy leaves
+      ctx.fillStyle = "#1b5e20";
+      const cOff = sx * 0.2 % 60;
+      for (let i = -60; i < W + 60; i += 60) {
+        ctx.beginPath(); ctx.ellipse(i + 30 - cOff, 20, 40, 25, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    },
+    drawGround(ctx, W, H, groundTop, ph, sx) {
+      ctx.fillStyle = "#5d4037";
+      ctx.fillRect(0, groundTop + ph, W, H - groundTop - ph);
+      ctx.fillStyle = "#6d4c41";
+      ctx.fillRect(0, groundTop + ph - 4, W, 4);
+      // scrolling dirt specks
+      ctx.fillStyle = "#4e342e";
+      const gOff = sx % 22;
+      for (let i = -22; i < W + 22; i += 22) {
+        const x = i - gOff;
+        ctx.fillRect(x + (Math.abs(i) * 5 % 13), groundTop + ph + 8, 3, 2);
+      }
+    },
+    drawScenery(ctx, W, groundTop, ph, fc, sx) {
+      // scrolling background trees
+      const period = 300;
+      const sOff = (sx * 0.3) % period;
+      function tree(baseX, h) {
+        const x = ((baseX - sOff) % period + period) % period + W - period + 50;
+        ctx.fillStyle = "#4e342e";
+        ctx.fillRect(x - 5, groundTop + ph - h, 10, h);
+        ctx.fillStyle = "#2e7d32";
+        ctx.beginPath(); ctx.moveTo(x, groundTop + ph - h - 30); ctx.lineTo(x - 22, groundTop + ph - h + 10); ctx.lineTo(x + 22, groundTop + ph - h + 10); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(x, groundTop + ph - h - 18); ctx.lineTo(x - 18, groundTop + ph - h + 18); ctx.lineTo(x + 18, groundTop + ph - h + 18); ctx.closePath(); ctx.fill();
+      }
+      tree(0, 40); tree(70, 55); tree(150, 45); tree(220, 35);
+      // scrolling bushes
+      ctx.fillStyle = "#388e3c";
+      const b1x = ((30 - sOff) % period + period) % period + W - period + 50;
+      const b2x = ((120 - sOff) % period + period) % period + W - period + 50;
+      ctx.beginPath(); ctx.ellipse(b1x, groundTop + ph - 4, 20, 12, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(b2x, groundTop + ph - 3, 16, 10, 0, 0, Math.PI * 2); ctx.fill();
+    },
+    drawObstacle(ctx, o) {
+      if (o.obsType === "stump") {
+        ctx.fillStyle = "#5d4037";
+        ctx.beginPath(); ctx.roundRect(o.x, o.y, o.w, o.h, 4); ctx.fill();
+        ctx.fillStyle = "#795548";
+        ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + 2, o.w / 2, 5, 0, 0, Math.PI * 2); ctx.fill();
+        // rings
+        ctx.strokeStyle = "#4e342e"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + 2, o.w / 4, 3, 0, 0, Math.PI * 2); ctx.stroke();
+      } else if (o.obsType === "mushroom") {
+        // stem
+        ctx.fillStyle = "#f5f5dc";
+        ctx.fillRect(o.x + o.w * 0.3, o.y + o.h * 0.4, o.w * 0.4, o.h * 0.6);
+        // cap
+        ctx.fillStyle = "#d32f2f";
+        ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h * 0.4, o.w / 2, o.h * 0.4, 0, Math.PI, 0); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h * 0.4, o.w / 2, 4, 0, 0, Math.PI); ctx.fill();
+        // spots
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.arc(o.x + o.w * 0.35, o.y + o.h * 0.2, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(o.x + o.w * 0.65, o.y + o.h * 0.25, 2.5, 0, Math.PI * 2); ctx.fill();
+      } else {
+        // mossy boulder
+        ctx.fillStyle = "#757575";
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.1, o.y + o.h);
+        ctx.quadraticCurveTo(o.x - 2, o.y + o.h * 0.4, o.x + o.w * 0.3, o.y + o.h * 0.1);
+        ctx.quadraticCurveTo(o.x + o.w * 0.5, o.y - 2, o.x + o.w * 0.75, o.y + o.h * 0.15);
+        ctx.quadraticCurveTo(o.x + o.w + 2, o.y + o.h * 0.35, o.x + o.w * 0.9, o.y + o.h);
+        ctx.closePath(); ctx.fill();
+        // highlight
+        ctx.fillStyle = "#8a8a8a";
+        ctx.beginPath();
+        ctx.ellipse(o.x + o.w * 0.4, o.y + o.h * 0.35, o.w * 0.2, o.h * 0.15, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        // moss patches
+        ctx.fillStyle = "#558b2f";
+        ctx.beginPath(); ctx.ellipse(o.x + o.w * 0.2, o.y + o.h * 0.3, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(o.x + o.w * 0.65, o.y + o.h * 0.2, 6, 4, 0.3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#33691e";
+        ctx.beginPath(); ctx.ellipse(o.x + o.w * 0.45, o.y + o.h * 0.15, 4, 2.5, -0.2, 0, Math.PI * 2); ctx.fill();
+      }
+    },
+  },
+  {
+    id: "city", name: "City", emoji: "🏙️", price: 40,
+    obstacleTypes: [
+      { type: "hydrant", minH: 30, maxH: 44, minW: 20, maxW: 28 },
+      { type: "taxi",    minH: 26, maxH: 36, minW: 36, maxW: 50 },
+      { type: "mailbox", minH: 32, maxH: 50, minW: 20, maxW: 28 },
+    ],
+    drawSky(ctx, W, groundTop, sx) {
+      const g = ctx.createLinearGradient(0, 0, 0, groundTop);
+      g.addColorStop(0, "#78909c"); g.addColorStop(1, "#b0bec5");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, groundTop);
+    },
+    drawGround(ctx, W, H, groundTop, ph, sx) {
+      ctx.fillStyle = "#9e9e9e";
+      ctx.fillRect(0, groundTop + ph, W, H - groundTop - ph);
+      ctx.fillStyle = "#757575";
+      ctx.fillRect(0, groundTop + ph - 3, W, 3);
+      // scrolling sidewalk lines
+      ctx.strokeStyle = "#bdbdbd"; ctx.lineWidth = 1;
+      const gOff = sx % 50;
+      for (let i = -50; i < W + 50; i += 50) {
+        const x = i - gOff;
+        ctx.beginPath(); ctx.moveTo(x, groundTop + ph); ctx.lineTo(x, H); ctx.stroke();
+      }
+    },
+    drawScenery(ctx, W, groundTop, ph, fc, sx) {
+      // scrolling building skyline
+      const period = 400;
+      const sOff = (sx * 0.2) % period;
+      const buildings = [
+        { bx: 0, w: 50, h: 80, color: "#455a64" },
+        { bx: 60, w: 40, h: 110, color: "#37474f" },
+        { bx: 110, w: 55, h: 70, color: "#546e7a" },
+        { bx: 175, w: 45, h: 95, color: "#37474f" },
+        { bx: 230, w: 35, h: 65, color: "#455a64" },
+        { bx: 280, w: 50, h: 85, color: "#546e7a" },
+        { bx: 340, w: 40, h: 100, color: "#37474f" },
+      ];
+      buildings.forEach(b => {
+        const x = ((b.bx - sOff) % period + period) % period + W - period;
+        ctx.fillStyle = b.color;
+        ctx.fillRect(x, groundTop + ph - b.h, b.w, b.h);
+        // windows
+        ctx.fillStyle = "#ffeb3b";
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 3; c++) {
+            if (Math.sin(b.bx + r * 3 + c * 7 + fc * 0.01) > 0) {
+              ctx.fillRect(x + 6 + c * (b.w / 3 - 2), groundTop + ph - b.h + 8 + r * 18, 6, 8);
+            }
+          }
+        }
+      });
+    },
+    drawObstacle(ctx, o) {
+      if (o.obsType === "hydrant") {
+        ctx.fillStyle = "#c62828";
+        ctx.beginPath(); ctx.roundRect(o.x + o.w * 0.2, o.y, o.w * 0.6, o.h, 4); ctx.fill();
+        // cap
+        ctx.fillRect(o.x + o.w * 0.15, o.y, o.w * 0.7, o.h * 0.15);
+        // side nozzles
+        ctx.fillRect(o.x, o.y + o.h * 0.3, o.w, o.h * 0.15);
+        ctx.fillStyle = "#b71c1c";
+        ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y - 2, o.w * 0.2, 0, Math.PI * 2); ctx.fill();
+      } else if (o.obsType === "taxi") {
+        // yellow taxi cab (side view)
+        // body
+        ctx.fillStyle = "#fdd835";
+        ctx.beginPath(); ctx.roundRect(o.x, o.y + o.h * 0.3, o.w, o.h * 0.5, 4); ctx.fill();
+        // roof
+        ctx.fillStyle = "#fbc02d";
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.2, o.y + o.h * 0.3);
+        ctx.lineTo(o.x + o.w * 0.3, o.y + o.h * 0.05);
+        ctx.lineTo(o.x + o.w * 0.75, o.y + o.h * 0.05);
+        ctx.lineTo(o.x + o.w * 0.85, o.y + o.h * 0.3);
+        ctx.closePath(); ctx.fill();
+        // windows
+        ctx.fillStyle = "#bbdefb";
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.25, o.y + o.h * 0.3);
+        ctx.lineTo(o.x + o.w * 0.33, o.y + o.h * 0.1);
+        ctx.lineTo(o.x + o.w * 0.5, o.y + o.h * 0.1);
+        ctx.lineTo(o.x + o.w * 0.5, o.y + o.h * 0.3);
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.53, o.y + o.h * 0.3);
+        ctx.lineTo(o.x + o.w * 0.53, o.y + o.h * 0.1);
+        ctx.lineTo(o.x + o.w * 0.72, o.y + o.h * 0.1);
+        ctx.lineTo(o.x + o.w * 0.8, o.y + o.h * 0.3);
+        ctx.closePath(); ctx.fill();
+        // TAXI sign on roof
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.roundRect(o.x + o.w * 0.4, o.y, o.w * 0.25, o.h * 0.08, 2); ctx.fill();
+        // wheels
+        ctx.fillStyle = "#333";
+        ctx.beginPath(); ctx.arc(o.x + o.w * 0.22, o.y + o.h * 0.82, o.h * 0.18, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(o.x + o.w * 0.78, o.y + o.h * 0.82, o.h * 0.18, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#9e9e9e";
+        ctx.beginPath(); ctx.arc(o.x + o.w * 0.22, o.y + o.h * 0.82, o.h * 0.08, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(o.x + o.w * 0.78, o.y + o.h * 0.82, o.h * 0.08, 0, Math.PI * 2); ctx.fill();
+        // checker stripe
+        ctx.fillStyle = "#212121";
+        for (let i = 0; i < 5; i++) {
+          if (i % 2 === 0) ctx.fillRect(o.x + o.w * 0.1 + i * o.w * 0.15, o.y + o.h * 0.55, o.w * 0.12, o.h * 0.08);
+        }
+      } else {
+        // blue mailbox
+        ctx.fillStyle = "#1565c0";
+        ctx.beginPath(); ctx.roundRect(o.x + o.w * 0.1, o.y + o.h * 0.15, o.w * 0.8, o.h * 0.85, [4, 4, 0, 0]); ctx.fill();
+        // rounded top
+        ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h * 0.15, o.w * 0.4, o.h * 0.15, 0, Math.PI, 0); ctx.fill();
+        // mail slot
+        ctx.fillStyle = "#0d47a1";
+        ctx.fillRect(o.x + o.w * 0.2, o.y + o.h * 0.35, o.w * 0.6, o.h * 0.06);
+        // US MAIL label
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 6px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("MAIL", o.x + o.w / 2, o.y + o.h * 0.55);
+        // pull handle
+        ctx.fillStyle = "#0d47a1";
+        ctx.fillRect(o.x + o.w * 0.3, o.y + o.h * 0.62, o.w * 0.4, o.h * 0.06);
+      }
+    },
+  },
+  {
+    id: "paris", name: "Paris", emoji: "🗼", price: 80,
+    obstacleTypes: [
+      { type: "eiffel",    minH: 36, maxH: 56, minW: 26, maxW: 36 },
+      { type: "croissant", minH: 22, maxH: 34, minW: 28, maxW: 40 },
+      { type: "barrel",    minH: 28, maxH: 42, minW: 24, maxW: 34 },
+    ],
+    drawSky(ctx, W, groundTop, sx) {
+      const g = ctx.createLinearGradient(0, 0, 0, groundTop);
+      g.addColorStop(0, "#f48fb1"); g.addColorStop(0.5, "#ce93d8"); g.addColorStop(1, "#90caf9");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, groundTop);
+    },
+    drawGround(ctx, W, H, groundTop, ph, sx) {
+      ctx.fillStyle = "#d7ccc8";
+      ctx.fillRect(0, groundTop + ph, W, H - groundTop - ph);
+      ctx.fillStyle = "#bcaaa4";
+      ctx.fillRect(0, groundTop + ph - 3, W, 3);
+      // scrolling cobblestone pattern
+      ctx.strokeStyle = "#a1887f"; ctx.lineWidth = 0.5;
+      const gOff = sx % 24;
+      for (let y = groundTop + ph + 2; y < H; y += 10) {
+        const rowOff = (Math.floor((y - groundTop) / 10) % 2) * 12;
+        for (let x = -24 + rowOff; x < W + 24; x += 24) {
+          ctx.strokeRect(x - gOff, y, 22, 8);
+        }
+      }
+    },
+    drawScenery(ctx, W, groundTop, ph, fc, sx) {
+      const period = 500;
+      const sOff = (sx * 0.25) % period;
+      // Eiffel Tower silhouette
+      const eX = ((200 - sOff) % period + period) % period + W - period;
+      ctx.fillStyle = "#5d4037";
+      ctx.beginPath();
+      ctx.moveTo(eX - 20, groundTop + ph); ctx.lineTo(eX - 5, groundTop - 50);
+      ctx.lineTo(eX, groundTop - 50); ctx.lineTo(eX + 20, groundTop + ph);
+      ctx.lineTo(eX + 10, groundTop + ph); ctx.lineTo(eX, groundTop - 10);
+      ctx.lineTo(eX - 3, groundTop - 10); ctx.lineTo(eX - 10, groundTop + ph);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "#5d4037"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(eX - 12, groundTop + ph - 20); ctx.lineTo(eX + 12, groundTop + ph - 20); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(eX - 8, groundTop - 20); ctx.lineTo(eX + 6, groundTop - 20); ctx.stroke();
+      // cafe awning
+      const aX = ((400 - sOff) % period + period) % period + W - period;
+      ctx.fillStyle = "#c62828";
+      ctx.fillRect(aX, groundTop + ph - 30, 50, 10);
+      ctx.fillStyle = "#fff";
+      for (let x = aX + 5; x < aX + 50; x += 10) {
+        ctx.fillRect(x, groundTop + ph - 30, 5, 10);
+      }
+      // lamp post
+      const lX = ((350 - sOff) % period + period) % period + W - period;
+      ctx.strokeStyle = "#333"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(lX, groundTop + ph); ctx.lineTo(lX, groundTop - 5); ctx.stroke();
+      ctx.fillStyle = "#ffeb3b";
+      ctx.beginPath(); ctx.arc(lX, groundTop - 8, 5, 0, Math.PI * 2); ctx.fill();
+    },
+    drawObstacle(ctx, o) {
+      if (o.obsType === "eiffel") {
+        // mini Eiffel Tower
+        const cx = o.x + o.w / 2;
+        ctx.fillStyle = "#5d4037";
+        // main tower shape - two legs meeting at top
+        ctx.beginPath();
+        ctx.moveTo(o.x + 2, o.y + o.h);           // bottom-left
+        ctx.lineTo(cx - 2, o.y + o.h * 0.35);      // narrow waist left
+        ctx.lineTo(cx - 1, o.y);                    // top-left
+        ctx.lineTo(cx + 1, o.y);                    // top-right
+        ctx.lineTo(cx + 2, o.y + o.h * 0.35);      // narrow waist right
+        ctx.lineTo(o.x + o.w - 2, o.y + o.h);      // bottom-right
+        ctx.closePath(); ctx.fill();
+        // antenna/spire
+        ctx.strokeStyle = "#5d4037"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(cx, o.y); ctx.lineTo(cx, o.y - 5); ctx.stroke();
+        // observation deck platform
+        ctx.fillStyle = "#795548";
+        ctx.fillRect(o.x + o.w * 0.15, o.y + o.h * 0.33, o.w * 0.7, 3);
+        // arch cutout (lighter area under the arch)
+        ctx.fillStyle = "#8d6e63";
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.2, o.y + o.h);
+        ctx.quadraticCurveTo(cx, o.y + o.h * 0.55, o.x + o.w * 0.8, o.y + o.h);
+        ctx.closePath(); ctx.fill();
+        // cross beams
+        ctx.strokeStyle = "#4e342e"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(o.x + o.w * 0.12, o.y + o.h * 0.65); ctx.lineTo(o.x + o.w * 0.88, o.y + o.h * 0.65); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(o.x + o.w * 0.25, o.y + o.h * 0.5); ctx.lineTo(o.x + o.w * 0.75, o.y + o.h * 0.5); ctx.stroke();
+        // lattice detail
+        ctx.strokeStyle = "#6d4c41"; ctx.lineWidth = 0.5;
+        for (let i = 0.4; i < 0.95; i += 0.1) {
+          const lx = cx - (o.w * 0.4 * (i - 0.35));
+          const rx = cx + (o.w * 0.4 * (i - 0.35));
+          ctx.beginPath(); ctx.moveTo(lx, o.y + o.h * i); ctx.lineTo(rx, o.y + o.h * (i + 0.05)); ctx.stroke();
+        }
+      } else if (o.obsType === "croissant") {
+        // golden croissant
+        const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
+        ctx.fillStyle = "#e8a735";
+        // crescent moon shape
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.1, o.y + o.h * 0.7);
+        ctx.quadraticCurveTo(o.x, o.y + o.h * 0.3, o.x + o.w * 0.25, o.y + o.h * 0.15);
+        ctx.quadraticCurveTo(o.x + o.w * 0.5, o.y, o.x + o.w * 0.75, o.y + o.h * 0.15);
+        ctx.quadraticCurveTo(o.x + o.w, o.y + o.h * 0.3, o.x + o.w * 0.9, o.y + o.h * 0.7);
+        ctx.quadraticCurveTo(o.x + o.w * 0.75, o.y + o.h * 0.5, cx, o.y + o.h * 0.45);
+        ctx.quadraticCurveTo(o.x + o.w * 0.25, o.y + o.h * 0.5, o.x + o.w * 0.1, o.y + o.h * 0.7);
+        ctx.closePath(); ctx.fill();
+        // darker ridges
+        ctx.strokeStyle = "#c68a2a"; ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.3, o.y + o.h * 0.2);
+        ctx.quadraticCurveTo(o.x + o.w * 0.35, o.y + o.h * 0.55, o.x + o.w * 0.25, o.y + o.h * 0.65);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.5, o.y + o.h * 0.12);
+        ctx.quadraticCurveTo(o.x + o.w * 0.5, o.y + o.h * 0.45, o.x + o.w * 0.5, o.y + o.h * 0.45);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.7, o.y + o.h * 0.2);
+        ctx.quadraticCurveTo(o.x + o.w * 0.65, o.y + o.h * 0.55, o.x + o.w * 0.75, o.y + o.h * 0.65);
+        ctx.stroke();
+        // bottom base
+        ctx.fillStyle = "#d4932e";
+        ctx.beginPath();
+        ctx.ellipse(cx, o.y + o.h * 0.85, o.w * 0.35, o.h * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // wine barrel
+        ctx.fillStyle = "#6d4c41";
+        // barrel body (wider in middle)
+        ctx.beginPath();
+        ctx.moveTo(o.x + 3, o.y);
+        ctx.quadraticCurveTo(o.x - 1, o.y + o.h / 2, o.x + 3, o.y + o.h);
+        ctx.lineTo(o.x + o.w - 3, o.y + o.h);
+        ctx.quadraticCurveTo(o.x + o.w + 1, o.y + o.h / 2, o.x + o.w - 3, o.y);
+        ctx.closePath(); ctx.fill();
+        // wood grain
+        ctx.strokeStyle = "#5d4037"; ctx.lineWidth = 0.5;
+        for (let i = 0.15; i < 1; i += 0.18) {
+          ctx.beginPath();
+          ctx.moveTo(o.x + 3, o.y + o.h * i);
+          ctx.lineTo(o.x + o.w - 3, o.y + o.h * i);
+          ctx.stroke();
+        }
+        // metal bands
+        ctx.strokeStyle = "#9e9e9e"; ctx.lineWidth = 2;
+        ctx.beginPath();
+        const band1 = o.y + o.h * 0.2;
+        ctx.moveTo(o.x + 4, band1);
+        ctx.quadraticCurveTo(o.x - 1, band1 + 2, o.x + 4, band1); // just flat
+        ctx.lineTo(o.x + o.w - 4, band1);
+        ctx.stroke();
+        const band2 = o.y + o.h * 0.8;
+        ctx.beginPath();
+        ctx.moveTo(o.x + 4, band2);
+        ctx.lineTo(o.x + o.w - 4, band2);
+        ctx.stroke();
+        // spigot/tap
+        ctx.fillStyle = "#795548";
+        ctx.fillRect(o.x + o.w - 2, o.y + o.h * 0.45, 5, 4);
+        ctx.fillStyle = "#9e9e9e";
+        ctx.beginPath(); ctx.arc(o.x + o.w + 3, o.y + o.h * 0.47, 2, 0, Math.PI * 2); ctx.fill();
+      }
+    },
+  },
+  {
+    id: "kitchen", name: "Kitchen", emoji: "🍳", price: 60,
+    obstacleTypes: [
+      { type: "pot",        minH: 28, maxH: 42, minW: 24, maxW: 36 },
+      { type: "mixer",      minH: 32, maxH: 50, minW: 26, maxW: 36 },
+      { type: "knifeblock", minH: 32, maxH: 50, minW: 22, maxW: 30 },
+    ],
+    drawSky(ctx, W, groundTop, sx) {
+      const g = ctx.createLinearGradient(0, 0, 0, groundTop);
+      g.addColorStop(0, "#fff9c4"); g.addColorStop(1, "#fff176");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, groundTop);
+    },
+    drawGround(ctx, W, H, groundTop, ph, sx) {
+      // scrolling checkered tile
+      const tileSize = 16;
+      const gOff = sx % (tileSize * 2);
+      for (let y = groundTop + ph; y < H; y += tileSize) {
+        for (let x = -tileSize * 2; x < W + tileSize * 2; x += tileSize) {
+          const ax = x - gOff;
+          const isWhite = ((Math.floor((x + 1000) / tileSize) + Math.floor(y / tileSize)) % 2 === 0);
+          ctx.fillStyle = isWhite ? "#f5f5f5" : "#e0e0e0";
+          ctx.fillRect(ax, y, tileSize, tileSize);
+        }
+      }
+      ctx.fillStyle = "#bdbdbd";
+      ctx.fillRect(0, groundTop + ph - 3, W, 3);
+    },
+    drawScenery(ctx, W, groundTop, ph, fc, sx) {
+      // scrolling kitchen scenery
+      const period = 350;
+      const sOff = (sx * 0.25) % period;
+      // cabinets
+      const cX = ((0 - sOff) % period + period) % period + W - period;
+      ctx.fillStyle = "#8d6e63";
+      ctx.fillRect(cX, 10, 70, groundTop - 20);
+      ctx.fillRect(cX + 80, 10, 50, groundTop - 30);
+      ctx.strokeStyle = "#6d4c41"; ctx.lineWidth = 1;
+      ctx.strokeRect(cX + 5, 15, 60, groundTop - 30);
+      ctx.strokeRect(cX + 85, 15, 40, groundTop - 40);
+      ctx.fillStyle = "#ffb300";
+      ctx.beginPath(); ctx.arc(cX + 35, groundTop / 2, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cX + 105, groundTop / 2 - 5, 3, 0, Math.PI * 2); ctx.fill();
+      // fridge
+      const fX = ((180 - sOff) % period + period) % period + W - period;
+      ctx.fillStyle = "#eceff1";
+      ctx.fillRect(fX, 10, 55, groundTop + ph - 10);
+      ctx.strokeStyle = "#b0bec5"; ctx.lineWidth = 1;
+      ctx.strokeRect(fX, 10, 55, groundTop + ph - 10);
+      ctx.fillStyle = "#90a4ae";
+      ctx.fillRect(fX + 48, 40, 4, 20);
+      ctx.fillRect(fX + 48, groundTop + ph - 50, 4, 20);
+      ctx.strokeStyle = "#b0bec5";
+      ctx.beginPath(); ctx.moveTo(fX, groundTop + ph - 30); ctx.lineTo(fX + 55, groundTop + ph - 30); ctx.stroke();
+    },
+    drawObstacle(ctx, o) {
+      if (o.obsType === "pot") {
+        // cooking pot
+        ctx.fillStyle = "#757575";
+        ctx.beginPath(); ctx.roundRect(o.x + 2, o.y + o.h * 0.2, o.w - 4, o.h * 0.8, [0, 0, 5, 5]); ctx.fill();
+        // rim
+        ctx.fillStyle = "#616161";
+        ctx.fillRect(o.x, o.y + o.h * 0.18, o.w, o.h * 0.08);
+        // lid
+        ctx.fillStyle = "#9e9e9e";
+        ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h * 0.18, o.w / 2, 4, 0, 0, Math.PI * 2); ctx.fill();
+        // lid knob
+        ctx.fillStyle = "#333";
+        ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y + o.h * 0.1, 4, 0, Math.PI * 2); ctx.fill();
+        // handles
+        ctx.strokeStyle = "#616161"; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(o.x - 2, o.y + o.h * 0.45, 5, Math.PI * 0.5, Math.PI * 1.5); ctx.stroke();
+        ctx.beginPath(); ctx.arc(o.x + o.w + 2, o.y + o.h * 0.45, 5, -Math.PI * 0.5, Math.PI * 0.5); ctx.stroke();
+      } else if (o.obsType === "mixer") {
+        // stand mixer
+        // base
+        ctx.fillStyle = "#e53935";
+        ctx.beginPath(); ctx.roundRect(o.x + o.w * 0.1, o.y + o.h * 0.55, o.w * 0.8, o.h * 0.45, [0, 0, 6, 6]); ctx.fill();
+        // motor head
+        ctx.fillStyle = "#c62828";
+        ctx.beginPath(); ctx.roundRect(o.x + o.w * 0.05, o.y + o.h * 0.15, o.w * 0.6, o.h * 0.42, 6); ctx.fill();
+        // hinge/joint
+        ctx.fillStyle = "#b71c1c";
+        ctx.beginPath(); ctx.arc(o.x + o.w * 0.6, o.y + o.h * 0.3, o.w * 0.08, 0, Math.PI * 2); ctx.fill();
+        // top knob
+        ctx.fillStyle = "#9e9e9e";
+        ctx.beginPath(); ctx.roundRect(o.x + o.w * 0.15, o.y, o.w * 0.2, o.h * 0.18, 3); ctx.fill();
+        // bowl
+        ctx.fillStyle = "#bdbdbd";
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.2, o.y + o.h * 0.55);
+        ctx.quadraticCurveTo(o.x + o.w * 0.15, o.y + o.h * 0.85, o.x + o.w * 0.5, o.y + o.h * 0.9);
+        ctx.quadraticCurveTo(o.x + o.w * 0.85, o.y + o.h * 0.85, o.x + o.w * 0.8, o.y + o.h * 0.55);
+        ctx.closePath(); ctx.fill();
+        // whisk attachment
+        ctx.strokeStyle = "#9e9e9e"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(o.x + o.w * 0.35, o.y + o.h * 0.45); ctx.lineTo(o.x + o.w * 0.35, o.y + o.h * 0.58); ctx.stroke();
+      } else {
+        // knife block
+        ctx.fillStyle = "#5d4037";
+        // block body (trapezoidal)
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.1, o.y + o.h * 0.25);
+        ctx.lineTo(o.x + o.w * 0.9, o.y + o.h * 0.25);
+        ctx.lineTo(o.x + o.w * 0.85, o.y + o.h);
+        ctx.lineTo(o.x + o.w * 0.15, o.y + o.h);
+        ctx.closePath(); ctx.fill();
+        // wood grain
+        ctx.strokeStyle = "#4e342e"; ctx.lineWidth = 0.5;
+        for (let i = 0.35; i < 0.95; i += 0.12) {
+          ctx.beginPath(); ctx.moveTo(o.x + o.w * 0.15, o.y + o.h * i); ctx.lineTo(o.x + o.w * 0.85, o.y + o.h * i); ctx.stroke();
+        }
+        // knife handles sticking out
+        ctx.fillStyle = "#333";
+        ctx.beginPath(); ctx.roundRect(o.x + o.w * 0.2, o.y + o.h * 0.08, o.w * 0.12, o.h * 0.2, 2); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(o.x + o.w * 0.4, o.y + o.h * 0.03, o.w * 0.1, o.h * 0.25, 2); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(o.x + o.w * 0.58, o.y, o.w * 0.14, o.h * 0.28, 2); ctx.fill();
+        // knife blade tips visible
+        ctx.fillStyle = "#bdbdbd";
+        ctx.fillRect(o.x + o.w * 0.22, o.y + o.h * 0.22, o.w * 0.08, o.h * 0.06);
+        ctx.fillRect(o.x + o.w * 0.42, o.y + o.h * 0.22, o.w * 0.06, o.h * 0.06);
+        ctx.fillRect(o.x + o.w * 0.6, o.y + o.h * 0.22, o.w * 0.1, o.h * 0.06);
+      }
+    },
+  },
+  {
+    id: "mall", name: "Mall", emoji: "🛍️", price: 60,
+    obstacleTypes: [
+      { type: "cart",      minH: 30, maxH: 44, minW: 34, maxW: 48 },
+      { type: "mannequin", minH: 36, maxH: 54, minW: 20, maxW: 28 },
+      { type: "palm",      minH: 34, maxH: 50, minW: 24, maxW: 34 },
+    ],
+    drawSky(ctx, W, groundTop, sx) {
+      const g = ctx.createLinearGradient(0, 0, 0, groundTop);
+      g.addColorStop(0, "#fafafa"); g.addColorStop(1, "#f5f5f5");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, groundTop);
+      // scrolling ceiling lights
+      ctx.fillStyle = "#fff9c4";
+      const lOff = (sx * 0.15) % 200;
+      for (let x = -200; x < W + 200; x += 200) {
+        ctx.beginPath(); ctx.ellipse(x + 100 - lOff, 8, 40, 6, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    },
+    drawGround(ctx, W, H, groundTop, ph, sx) {
+      ctx.fillStyle = "#e0e0e0";
+      ctx.fillRect(0, groundTop + ph, W, H - groundTop - ph);
+      // scrolling shiny floor reflections
+      ctx.fillStyle = "rgba(255,255,255,0.4)";
+      const gOff = sx % 80;
+      for (let x = -80; x < W + 80; x += 80) {
+        ctx.fillRect(x + 10 - gOff, groundTop + ph + 4, 30, 2);
+      }
+      ctx.fillStyle = "#bdbdbd";
+      ctx.fillRect(0, groundTop + ph - 2, W, 2);
+    },
+    drawScenery(ctx, W, groundTop, ph, fc, sx) {
+      // scrolling store fronts
+      const period = 350;
+      const sOff = (sx * 0.25) % period;
+      const stores = [
+        { bx: 0, w: 70, color: "#e91e63", name: "FASHION" },
+        { bx: 80, w: 60, color: "#2196f3", name: "TECH" },
+        { bx: 150, w: 70, color: "#4caf50", name: "BOOKS" },
+        { bx: 240, w: 60, color: "#ff9800", name: "TOYS" },
+      ];
+      stores.forEach(s => {
+        const x = ((s.bx - sOff) % period + period) % period + W - period;
+        ctx.fillStyle = s.color;
+        ctx.fillRect(x, 20, s.w, groundTop + ph - 25);
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 8px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(s.name, x + s.w / 2, 32);
+        ctx.fillStyle = "rgba(255,255,255,0.3)";
+        ctx.fillRect(x + 5, 38, s.w - 10, groundTop + ph - 70);
+      });
+      // scrolling pillars
+      ctx.fillStyle = "#bdbdbd";
+      const pOff = (sx * 0.25) % 180;
+      for (let i = -180; i < W + 180; i += 180) {
+        ctx.fillRect(i - pOff, 15, 8, groundTop + ph - 15);
+      }
+    },
+    drawObstacle(ctx, o) {
+      if (o.obsType === "cart") {
+        // shopping cart (side view)
+        // basket frame
+        ctx.strokeStyle = "#9e9e9e"; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.15, o.y + o.h * 0.15);
+        ctx.lineTo(o.x + o.w * 0.1, o.y + o.h * 0.7);
+        ctx.lineTo(o.x + o.w * 0.85, o.y + o.h * 0.7);
+        ctx.lineTo(o.x + o.w * 0.75, o.y + o.h * 0.15);
+        ctx.closePath(); ctx.stroke();
+        // basket fill
+        ctx.fillStyle = "rgba(189,189,189,0.3)";
+        ctx.fill();
+        // grid lines on basket
+        ctx.strokeStyle = "#bdbdbd"; ctx.lineWidth = 0.8;
+        for (let i = 0.3; i < 0.65; i += 0.15) {
+          ctx.beginPath();
+          const lx = o.x + o.w * (0.15 - (i - 0.15) * 0.12);
+          const rx = o.x + o.w * (0.75 + (i - 0.15) * 0.24);
+          ctx.moveTo(lx, o.y + o.h * i);
+          ctx.lineTo(rx, o.y + o.h * i);
+          ctx.stroke();
+        }
+        // handle bar extending up-right
+        ctx.strokeStyle = "#9e9e9e"; ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.75, o.y + o.h * 0.15);
+        ctx.lineTo(o.x + o.w * 0.95, o.y);
+        ctx.stroke();
+        // handle grip
+        ctx.strokeStyle = "#333"; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.9, o.y);
+        ctx.lineTo(o.x + o.w, o.y);
+        ctx.stroke();
+        // wheels
+        ctx.fillStyle = "#333";
+        ctx.beginPath(); ctx.arc(o.x + o.w * 0.25, o.y + o.h * 0.85, o.h * 0.12, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(o.x + o.w * 0.7, o.y + o.h * 0.85, o.h * 0.12, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#757575";
+        ctx.beginPath(); ctx.arc(o.x + o.w * 0.25, o.y + o.h * 0.85, o.h * 0.05, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(o.x + o.w * 0.7, o.y + o.h * 0.85, o.h * 0.05, 0, Math.PI * 2); ctx.fill();
+        // axle bar
+        ctx.strokeStyle = "#9e9e9e"; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(o.x + o.w * 0.1, o.y + o.h * 0.72); ctx.lineTo(o.x + o.w * 0.25, o.y + o.h * 0.82); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(o.x + o.w * 0.85, o.y + o.h * 0.72); ctx.lineTo(o.x + o.w * 0.7, o.y + o.h * 0.82); ctx.stroke();
+      } else if (o.obsType === "mannequin") {
+        // store mannequin (torso + head on stand)
+        const cx = o.x + o.w / 2;
+        // stand base
+        ctx.fillStyle = "#424242";
+        ctx.beginPath(); ctx.ellipse(cx, o.y + o.h * 0.96, o.w * 0.35, o.h * 0.04, 0, 0, Math.PI * 2); ctx.fill();
+        // stand pole
+        ctx.fillStyle = "#616161";
+        ctx.fillRect(cx - 2, o.y + o.h * 0.55, 4, o.h * 0.42);
+        // torso
+        ctx.fillStyle = "#f5f5f5";
+        ctx.beginPath();
+        ctx.moveTo(cx - o.w * 0.3, o.y + o.h * 0.3);
+        ctx.quadraticCurveTo(cx - o.w * 0.35, o.y + o.h * 0.55, cx - o.w * 0.15, o.y + o.h * 0.58);
+        ctx.lineTo(cx + o.w * 0.15, o.y + o.h * 0.58);
+        ctx.quadraticCurveTo(cx + o.w * 0.35, o.y + o.h * 0.55, cx + o.w * 0.3, o.y + o.h * 0.3);
+        ctx.quadraticCurveTo(cx, o.y + o.h * 0.25, cx - o.w * 0.3, o.y + o.h * 0.3);
+        ctx.closePath(); ctx.fill();
+        // neck
+        ctx.fillRect(cx - 3, o.y + o.h * 0.18, 6, o.h * 0.14);
+        // head
+        ctx.beginPath(); ctx.ellipse(cx, o.y + o.h * 0.12, o.w * 0.18, o.h * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+        // subtle face line
+        ctx.strokeStyle = "#e0e0e0"; ctx.lineWidth = 0.5;
+        ctx.beginPath(); ctx.arc(cx + 2, o.y + o.h * 0.11, o.w * 0.08, 0.3, Math.PI - 0.3); ctx.stroke();
+      } else {
+        // decorative potted palm
+        const cx = o.x + o.w / 2;
+        // pot
+        ctx.fillStyle = "#8d6e63";
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.15, o.y + o.h * 0.6);
+        ctx.lineTo(o.x + o.w * 0.85, o.y + o.h * 0.6);
+        ctx.lineTo(o.x + o.w * 0.75, o.y + o.h);
+        ctx.lineTo(o.x + o.w * 0.25, o.y + o.h);
+        ctx.closePath(); ctx.fill();
+        // pot rim
+        ctx.fillStyle = "#795548";
+        ctx.fillRect(o.x + o.w * 0.12, o.y + o.h * 0.57, o.w * 0.76, o.h * 0.06);
+        // trunk
+        ctx.strokeStyle = "#795548"; ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx, o.y + o.h * 0.6);
+        ctx.quadraticCurveTo(cx + 3, o.y + o.h * 0.35, cx - 1, o.y + o.h * 0.2);
+        ctx.stroke();
+        // palm fronds
+        ctx.strokeStyle = "#388e3c"; ctx.lineWidth = 2;
+        ctx.fillStyle = "#4caf50";
+        // left frond
+        ctx.beginPath(); ctx.moveTo(cx - 1, o.y + o.h * 0.2);
+        ctx.quadraticCurveTo(o.x - 4, o.y + o.h * 0.1, o.x - 2, o.y + o.h * 0.25);
+        ctx.stroke();
+        // right frond
+        ctx.beginPath(); ctx.moveTo(cx - 1, o.y + o.h * 0.2);
+        ctx.quadraticCurveTo(o.x + o.w + 4, o.y + o.h * 0.05, o.x + o.w + 2, o.y + o.h * 0.2);
+        ctx.stroke();
+        // top frond
+        ctx.beginPath(); ctx.moveTo(cx - 1, o.y + o.h * 0.2);
+        ctx.quadraticCurveTo(cx + 5, o.y - 8, cx + 10, o.y + o.h * 0.05);
+        ctx.stroke();
+        // left-down frond
+        ctx.beginPath(); ctx.moveTo(cx - 1, o.y + o.h * 0.2);
+        ctx.quadraticCurveTo(o.x - 6, o.y + o.h * 0.3, o.x - 3, o.y + o.h * 0.42);
+        ctx.stroke();
+        // right-down frond
+        ctx.beginPath(); ctx.moveTo(cx - 1, o.y + o.h * 0.2);
+        ctx.quadraticCurveTo(o.x + o.w + 6, o.y + o.h * 0.25, o.x + o.w + 3, o.y + o.h * 0.38);
+        ctx.stroke();
+      }
+    },
+  },
+  {
+    id: "petstore", name: "Pet Store", emoji: "🐾", price: 60,
+    obstacleTypes: [
+      { type: "scratchpost", minH: 34, maxH: 54, minW: 22, maxW: 32 },
+      { type: "fishtank",    minH: 28, maxH: 42, minW: 30, maxW: 42 },
+      { type: "hamsterball", minH: 24, maxH: 38, minW: 24, maxW: 38 },
+    ],
+    drawSky(ctx, W, groundTop, sx) {
+      const g = ctx.createLinearGradient(0, 0, 0, groundTop);
+      g.addColorStop(0, "#c8e6c9"); g.addColorStop(1, "#e8f5e9");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, groundTop);
+      // scrolling paw prints on wall
+      ctx.fillStyle = "rgba(0,0,0,0.05)";
+      const pOff = (sx * 0.1) % 200;
+      [{ bx: 50, y: 60 }, { bx: 150, y: 40 }, { bx: 100, y: 85 }].forEach(p => {
+        const x = ((p.bx - pOff) % 200 + 200) % 200 + 0;
+        // repeat across width
+        for (let rx = x; rx < W; rx += 200) {
+          ctx.beginPath(); ctx.ellipse(rx, p.y, 8, 10, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(rx - 5, p.y - 10, 4, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(rx + 5, p.y - 10, 4, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(rx - 9, p.y - 5, 3, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(rx + 9, p.y - 5, 3, 0, Math.PI * 2); ctx.fill();
+        }
+      });
+    },
+    drawGround(ctx, W, H, groundTop, ph, sx) {
+      ctx.fillStyle = "#d7ccc8";
+      ctx.fillRect(0, groundTop + ph, W, H - groundTop - ph);
+      ctx.fillStyle = "#bcaaa4";
+      ctx.fillRect(0, groundTop + ph - 2, W, 2);
+      // scrolling floor tile lines
+      ctx.strokeStyle = "#c4a999"; ctx.lineWidth = 0.5;
+      const gOff = sx % 40;
+      for (let x = -40; x < W + 40; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x - gOff, groundTop + ph); ctx.lineTo(x - gOff, H); ctx.stroke();
+      }
+    },
+    drawScenery(ctx, W, groundTop, ph, fc, sx) {
+      // scrolling shelves
+      const period = 250;
+      const sOff = (sx * 0.3) % period;
+      const shX = ((0 - sOff) % period + period) % period + W - period;
+      ctx.fillStyle = "#8d6e63";
+      // shelf unit
+      ctx.fillRect(shX, 40, 220, 6);
+      ctx.fillRect(shX, 90, 220, 6);
+      ctx.fillRect(shX, 140, 220, 6);
+      ctx.fillRect(shX, 40, 6, groundTop + ph - 40);
+      ctx.fillRect(shX + 120, 40, 6, groundTop + ph - 40);
+      ctx.fillRect(shX + 214, 40, 6, groundTop + ph - 40);
+      // items on shelves
+      ctx.fillStyle = "#ff7043";
+      ctx.fillRect(shX + 20, 25, 16, 15);
+      ctx.fillStyle = "#42a5f5";
+      ctx.fillRect(shX + 50, 28, 12, 12);
+      ctx.fillStyle = "#66bb6a";
+      ctx.beginPath(); ctx.arc(shX + 90, 34, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#ef5350";
+      ctx.fillRect(shX + 20, 75, 14, 15);
+      ctx.fillStyle = "#ab47bc";
+      ctx.fillRect(shX + 60, 78, 12, 12);
+    },
+    drawObstacle(ctx, o) {
+      if (o.obsType === "scratchpost") {
+        // cat scratching post
+        const cx = o.x + o.w / 2;
+        // base platform
+        ctx.fillStyle = "#8d6e63";
+        ctx.fillRect(o.x, o.y + o.h * 0.9, o.w, o.h * 0.1);
+        // post (sisal rope texture)
+        ctx.fillStyle = "#d7ccc8";
+        ctx.fillRect(cx - 5, o.y + o.h * 0.25, 10, o.h * 0.65);
+        // rope wrapping lines
+        ctx.strokeStyle = "#bcaaa4"; ctx.lineWidth = 1;
+        for (let i = 0.3; i < 0.88; i += 0.05) {
+          ctx.beginPath();
+          ctx.moveTo(cx - 5, o.y + o.h * i);
+          ctx.lineTo(cx + 5, o.y + o.h * (i + 0.02));
+          ctx.stroke();
+        }
+        // top platform
+        ctx.fillStyle = "#e91e63";
+        ctx.beginPath(); ctx.roundRect(o.x - 2, o.y + o.h * 0.18, o.w + 4, o.h * 0.1, 3); ctx.fill();
+        // tiny cat silhouette sitting on top
+        ctx.fillStyle = "#333";
+        // body
+        ctx.beginPath(); ctx.ellipse(cx, o.y + o.h * 0.12, 5, 6, 0, 0, Math.PI * 2); ctx.fill();
+        // head
+        ctx.beginPath(); ctx.arc(cx + 3, o.y + o.h * 0.05, 4, 0, Math.PI * 2); ctx.fill();
+        // ears
+        ctx.beginPath(); ctx.moveTo(cx + 1, o.y + o.h * 0.02); ctx.lineTo(cx, o.y - 2); ctx.lineTo(cx + 3, o.y + o.h * 0.01); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(cx + 4, o.y + o.h * 0.01); ctx.lineTo(cx + 6, o.y - 2); ctx.lineTo(cx + 6, o.y + o.h * 0.02); ctx.fill();
+      } else if (o.obsType === "fishtank") {
+        // small fish tank
+        // tank body (glass)
+        ctx.fillStyle = "rgba(144,202,249,0.5)";
+        ctx.beginPath(); ctx.roundRect(o.x + 2, o.y + o.h * 0.1, o.w - 4, o.h * 0.8, 2); ctx.fill();
+        // water level
+        ctx.fillStyle = "rgba(66,165,245,0.35)";
+        ctx.fillRect(o.x + 3, o.y + o.h * 0.25, o.w - 6, o.h * 0.63);
+        // glass frame edges
+        ctx.strokeStyle = "#90a4ae"; ctx.lineWidth = 2;
+        ctx.strokeRect(o.x + 2, o.y + o.h * 0.1, o.w - 4, o.h * 0.8);
+        // stand/table
+        ctx.fillStyle = "#5d4037";
+        ctx.fillRect(o.x + 4, o.y + o.h * 0.9, 4, o.h * 0.1);
+        ctx.fillRect(o.x + o.w - 8, o.y + o.h * 0.9, 4, o.h * 0.1);
+        // little fish
+        ctx.fillStyle = "#ff7043";
+        ctx.beginPath();
+        ctx.ellipse(o.x + o.w * 0.4, o.y + o.h * 0.45, 5, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // fish tail
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.4 - 5, o.y + o.h * 0.45);
+        ctx.lineTo(o.x + o.w * 0.4 - 9, o.y + o.h * 0.42);
+        ctx.lineTo(o.x + o.w * 0.4 - 9, o.y + o.h * 0.48);
+        ctx.closePath(); ctx.fill();
+        // second fish
+        ctx.fillStyle = "#fdd835";
+        ctx.beginPath();
+        ctx.ellipse(o.x + o.w * 0.65, o.y + o.h * 0.6, 4, 2.5, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w * 0.65 + 4, o.y + o.h * 0.6);
+        ctx.lineTo(o.x + o.w * 0.65 + 8, o.y + o.h * 0.57);
+        ctx.lineTo(o.x + o.w * 0.65 + 8, o.y + o.h * 0.63);
+        ctx.closePath(); ctx.fill();
+        // gravel at bottom
+        ctx.fillStyle = "#a1887f";
+        for (let i = 0; i < 6; i++) {
+          ctx.beginPath();
+          ctx.arc(o.x + 6 + i * (o.w - 12) / 5, o.y + o.h * 0.84, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // bubbles
+        ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(o.x + o.w * 0.3, o.y + o.h * 0.35, 2, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(o.x + o.w * 0.35, o.y + o.h * 0.28, 1.5, 0, Math.PI * 2); ctx.stroke();
+      } else {
+        // hamster ball (clear ball with hamster inside)
+        const r = Math.min(o.w, o.h) / 2;
+        const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
+        // ball
+        ctx.fillStyle = "rgba(255,235,59,0.25)";
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#fdd835"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+        // air holes pattern
+        ctx.strokeStyle = "rgba(255,235,59,0.4)"; ctx.lineWidth = 0.5;
+        ctx.beginPath(); ctx.arc(cx, cy, r * 0.7, 0, Math.PI * 2); ctx.stroke();
+        // ventilation slots
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
+          ctx.fillStyle = "rgba(255,235,59,0.3)";
+          ctx.beginPath(); ctx.arc(cx + r * 0.85 * Math.cos(a), cy + r * 0.85 * Math.sin(a), 1.5, 0, Math.PI * 2); ctx.fill();
+        }
+        // tiny hamster inside
+        ctx.fillStyle = "#d4a373";
+        ctx.beginPath(); ctx.ellipse(cx + 1, cy + r * 0.15, r * 0.35, r * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+        // hamster head
+        ctx.beginPath(); ctx.arc(cx + r * 0.25, cy, r * 0.18, 0, Math.PI * 2); ctx.fill();
+        // hamster ear
+        ctx.beginPath(); ctx.arc(cx + r * 0.3, cy - r * 0.15, 2, 0, Math.PI * 2); ctx.fill();
+        // hamster eye
+        ctx.fillStyle = "#111";
+        ctx.beginPath(); ctx.arc(cx + r * 0.32, cy - r * 0.02, 1, 0, Math.PI * 2); ctx.fill();
+        // highlight on ball
+        ctx.fillStyle = "rgba(255,255,255,0.25)";
+        ctx.beginPath(); ctx.arc(cx - r * 0.3, cy - r * 0.3, r * 0.25, 0, Math.PI * 2); ctx.fill();
+      }
+    },
+  },
+];
+
+let selectedBgId = "playground";
+const unlockedBgs = new Set(["playground"]);
+const getBg = () => BACKGROUNDS.find(b => b.id === selectedBgId);
+
+// ═══════════════════════════════════════════════════════════
+//  GAME SETUP
+// ═══════════════════════════════════════════════════════════
+const canvas   = document.getElementById("gameCanvas");
+const ctx      = canvas.getContext("2d");
+const scoreEl  = document.getElementById("score");
+const hiEl     = document.getElementById("hi");
+const msgEl    = document.getElementById("message");
+const modal    = document.getElementById("char-modal");
+const searchEl = document.getElementById("char-search");
+const gridEl   = document.getElementById("char-grid");
+const playBtn  = document.getElementById("char-play-btn");
+const changeBtn= document.getElementById("change-char-btn");
+
+const GROUND_Y = 200;
+let state = "idle";
+let score = 0, frameCount = 0, speed = 5;
+let coinCount = parseInt(localStorage.getItem("dinoCoins")) || 0;
+let hiScore = parseInt(localStorage.getItem("dinoHiScore")) || 0;
+function saveProgress() {
+  localStorage.setItem("dinoCoins", coinCount);
+  localStorage.setItem("dinoHiScore", hiScore);
+  localStorage.setItem("dinoUnlockedChars", JSON.stringify([...unlockedChars]));
+  localStorage.setItem("dinoUnlockedBgs", JSON.stringify([...unlockedBgs]));
+  localStorage.setItem("dinoUnlockedHats", JSON.stringify([...unlockedHats]));
+  localStorage.setItem("dinoSelectedHat", selectedHatId || "");
+  localStorage.setItem("dinoMissionProgress", JSON.stringify(missionProgress));
+  localStorage.setItem("dinoCompletedMissions", JSON.stringify([...completedMissions]));
+}
+// Load unlocked characters/backgrounds/hats/missions from storage
+try {
+  const sc = JSON.parse(localStorage.getItem("dinoUnlockedChars"));
+  if (sc) sc.forEach(id => unlockedChars.add(id));
+  const sb = JSON.parse(localStorage.getItem("dinoUnlockedBgs"));
+  if (sb) sb.forEach(id => unlockedBgs.add(id));
+  const sh = JSON.parse(localStorage.getItem("dinoUnlockedHats"));
+  if (sh) sh.forEach(id => unlockedHats.add(id));
+  const savedHat = localStorage.getItem("dinoSelectedHat");
+  if (savedHat) selectedHatId = savedHat;
+  const mp = JSON.parse(localStorage.getItem("dinoMissionProgress"));
+  if (mp) missionProgress = { ...missionProgress, ...mp };
+  const cm = JSON.parse(localStorage.getItem("dinoCompletedMissions"));
+  if (cm) cm.forEach(id => completedMissions.add(id));
+} catch(e) {}
+const coinEl = document.getElementById("coincount");
+coinEl.textContent = coinCount;
+hiEl.textContent = hiScore;
+
+const PLAYER_H = 52;
+const DUCK_H = 28;
+const player = { x: 100, y: GROUND_Y, w: 48, h: PLAYER_H, vy: 0, jumping: false, ducking: false };
+
+let obstacles = [], obstacleTimer = 60;
+let coins = [], coinTimer = 0;
+let scrollX = 0;
+
+let airObstacles = [], airTimer = 120;
+
+// ── Physics ────────────────────────────────────────────────
+function jump() {
+  if (!player.jumping) { player.vy = -16; player.jumping = true; }
+}
+
+function startDuck() {
+  if (!player.ducking && !player.jumping) {
+    player.ducking = true;
+    player.y = GROUND_Y + (PLAYER_H - DUCK_H);
+    player.h = DUCK_H;
+  }
+}
+
+function stopDuck() {
+  if (player.ducking) {
+    player.ducking = false;
+    player.h = PLAYER_H;
+    player.y = GROUND_Y;
+  }
+}
+
+function spawnObstacle() {
+  const bg = getBg();
+  const ot = bg.obstacleTypes[Math.floor(Math.random() * bg.obstacleTypes.length)];
+  const h = ot.minH + Math.random() * (ot.maxH - ot.minH);
+  const w = ot.minW + Math.random() * (ot.maxW - ot.minW);
+  obstacles.push({
+    x: canvas.width + 20,
+    y: GROUND_Y + PLAYER_H - h,
+    w,
+    h,
+    obsType: ot.type,
+  });
+  obstacleTimer = 45 + Math.random() * 50;
+}
+
+function spawnAirObstacle() {
+  // air obstacles sit at head height — must duck to avoid
+  const types = ["bird", "bat", "bee"];
+  const type = types[Math.floor(Math.random() * types.length)];
+  const w = 30 + Math.random() * 14;
+  const h = 18 + Math.random() * 10;
+  airObstacles.push({
+    x: canvas.width + 20,
+    y: GROUND_Y - 8 + Math.random() * 12, // around head height
+    w, h, type,
+  });
+  airTimer = 100 + Math.random() * 140;
+}
+
+function drawAirObstacle(o) {
+  const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
+  const wingFlap = Math.sin(frameCount * 0.4 + o.x) * 6;
+  if (o.type === "bird") {
+    // body
+    ctx.fillStyle = "#5c6bc0";
+    ctx.beginPath(); ctx.ellipse(cx, cy, o.w * 0.35, o.h * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+    // head
+    ctx.beginPath(); ctx.arc(cx + o.w * 0.3, cy - 2, o.h * 0.22, 0, Math.PI * 2); ctx.fill();
+    // beak
+    ctx.fillStyle = "#ff9800";
+    ctx.beginPath(); ctx.moveTo(cx + o.w * 0.45, cy - 2); ctx.lineTo(cx + o.w * 0.55, cy); ctx.lineTo(cx + o.w * 0.45, cy + 2); ctx.closePath(); ctx.fill();
+    // eye
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(cx + o.w * 0.33, cy - 3, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#111";
+    ctx.beginPath(); ctx.arc(cx + o.w * 0.34, cy - 3, 1, 0, Math.PI * 2); ctx.fill();
+    // wings
+    ctx.fillStyle = "#3f51b5";
+    ctx.beginPath();
+    ctx.moveTo(cx - 4, cy);
+    ctx.quadraticCurveTo(cx - 2, cy - o.h * 0.5 + wingFlap, cx + 8, cy - 2);
+    ctx.lineTo(cx - 4, cy + 2);
+    ctx.closePath(); ctx.fill();
+  } else if (o.type === "bat") {
+    // body
+    ctx.fillStyle = "#333";
+    ctx.beginPath(); ctx.ellipse(cx, cy, o.w * 0.2, o.h * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+    // head
+    ctx.beginPath(); ctx.arc(cx, cy - o.h * 0.25, o.h * 0.18, 0, Math.PI * 2); ctx.fill();
+    // ears
+    ctx.beginPath(); ctx.moveTo(cx - 3, cy - o.h * 0.35); ctx.lineTo(cx - 5, cy - o.h * 0.55); ctx.lineTo(cx, cy - o.h * 0.3); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx + 3, cy - o.h * 0.35); ctx.lineTo(cx + 5, cy - o.h * 0.55); ctx.lineTo(cx, cy - o.h * 0.3); ctx.fill();
+    // eyes
+    ctx.fillStyle = "#f44336";
+    ctx.beginPath(); ctx.arc(cx - 2, cy - o.h * 0.25, 1.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 2, cy - o.h * 0.25, 1.2, 0, Math.PI * 2); ctx.fill();
+    // bat wings
+    ctx.fillStyle = "#444";
+    ctx.beginPath();
+    ctx.moveTo(cx - o.w * 0.15, cy);
+    ctx.quadraticCurveTo(cx - o.w * 0.4, cy - o.h * 0.3 + wingFlap, cx - o.w * 0.48, cy + wingFlap * 0.5);
+    ctx.quadraticCurveTo(cx - o.w * 0.3, cy + o.h * 0.1, cx - o.w * 0.15, cy + 3);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + o.w * 0.15, cy);
+    ctx.quadraticCurveTo(cx + o.w * 0.4, cy - o.h * 0.3 + wingFlap, cx + o.w * 0.48, cy + wingFlap * 0.5);
+    ctx.quadraticCurveTo(cx + o.w * 0.3, cy + o.h * 0.1, cx + o.w * 0.15, cy + 3);
+    ctx.closePath(); ctx.fill();
+  } else {
+    // bee
+    ctx.fillStyle = "#fdd835";
+    ctx.beginPath(); ctx.ellipse(cx, cy, o.w * 0.25, o.h * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+    // stripes
+    ctx.fillStyle = "#333";
+    ctx.fillRect(cx - o.w * 0.08, cy - o.h * 0.25, o.w * 0.06, o.h * 0.5);
+    ctx.fillRect(cx + o.w * 0.04, cy - o.h * 0.25, o.w * 0.06, o.h * 0.5);
+    // head
+    ctx.fillStyle = "#333";
+    ctx.beginPath(); ctx.arc(cx + o.w * 0.25, cy, o.h * 0.18, 0, Math.PI * 2); ctx.fill();
+    // wings
+    ctx.fillStyle = "rgba(200,230,255,0.6)";
+    ctx.beginPath(); ctx.ellipse(cx - 2, cy - o.h * 0.3 + wingFlap * 0.7, o.w * 0.18, o.h * 0.25, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx + 4, cy - o.h * 0.3 + wingFlap * 0.7, o.w * 0.15, o.h * 0.2, 0.3, 0, Math.PI * 2); ctx.fill();
+    // stinger
+    ctx.fillStyle = "#333";
+    ctx.beginPath(); ctx.moveTo(cx - o.w * 0.25, cy); ctx.lineTo(cx - o.w * 0.35, cy + 1); ctx.lineTo(cx - o.w * 0.25, cy + 2); ctx.closePath(); ctx.fill();
+  }
+}
+
+function collidesAir(o) {
+  const pad = 4;
+  const py = player.ducking ? player.y : player.y;
+  const ph = player.h;
+  return (
+    player.x + pad < o.x + o.w &&
+    player.x + player.w - pad > o.x &&
+    py + pad < o.y + o.h &&
+    py + ph > o.y + pad
+  );
+}
+
+function spawnCoins() {
+  // only spawn sometimes (roughly 40% chance when timer fires)
+  if (Math.random() > 0.4) { coinTimer = 60 + Math.random() * 120; return; }
+  const count = 2 + Math.floor(Math.random() * 4); // 2-5 coins in a row
+  const startX = canvas.width + 20;
+  const isHigh = Math.random() < 0.35; // some coin trails are up high (jump to get)
+  const cy = isHigh ? GROUND_Y - 20 : GROUND_Y + player.h - 18;
+  for (let i = 0; i < count; i++) {
+    coins.push({ x: startX + i * 28, y: cy, r: 8, collected: false });
+  }
+  coinTimer = 80 + Math.random() * 150;
+}
+
+function drawCoin(c) {
+  if (c.collected) return;
+  const shimmer = Math.sin(frameCount * 0.15 + c.x * 0.05) * 0.3 + 0.7;
+  // outer ring
+  ctx.fillStyle = `rgba(255,215,0,${shimmer})`;
+  ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill();
+  // inner circle
+  ctx.fillStyle = `rgba(255,235,80,${shimmer})`;
+  ctx.beginPath(); ctx.arc(c.x, c.y, c.r * 0.65, 0, Math.PI * 2); ctx.fill();
+  // dollar sign
+  ctx.fillStyle = `rgba(180,140,0,${shimmer})`;
+  ctx.font = "bold 9px sans-serif"; ctx.textAlign = "center";
+  ctx.fillText("$", c.x, c.y + 3.5);
+  // shine highlight
+  ctx.fillStyle = `rgba(255,255,255,${shimmer * 0.45})`;
+  ctx.beginPath(); ctx.arc(c.x - 2, c.y - 2.5, c.r * 0.3, 0, Math.PI * 2); ctx.fill();
+}
+
+function collectCoin(c) {
+  const pad = 4;
+  return !c.collected &&
+    player.x + pad < c.x + c.r &&
+    player.x + player.w - pad > c.x - c.r &&
+    player.y + pad < c.y + c.r &&
+    player.y + player.h > c.y - c.r;
+}
+
+// ── Drawing ────────────────────────────────────────────────
+
+function drawOverlay() {
+  if (state === "idle") {
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const ch = getChar();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 38px Courier New";
+    ctx.fillText(`${ch.emoji} ${ch.name.toUpperCase()} JUMP`, canvas.width / 2, 108);
+    ctx.font = "18px Courier New";
+    ctx.fillStyle = "#ddd";
+    ctx.fillText("SPACE or tap to start", canvas.width / 2, 150);
+  }
+  if (state === "dead") {
+    ctx.fillStyle = "rgba(0,0,0,0.4)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ff4444";
+    ctx.font = "bold 38px Courier New";
+    ctx.fillText("GAME OVER", canvas.width / 2, 105);
+    ctx.fillStyle = "#fff";
+    ctx.font = "22px Courier New";
+    ctx.fillText(`Score: ${score}`, canvas.width / 2, 140);
+    ctx.fillStyle = "#ffd700";
+    ctx.font = "18px Courier New";
+    ctx.fillText(`Coins: ${coinCount}`, canvas.width / 2, 166);
+    ctx.font = "16px Courier New";
+    ctx.fillStyle = "#ddd";
+    ctx.fillText("SPACE / tap to restart", canvas.width / 2, 194);
+  }
+}
+
+// ── Collision ──────────────────────────────────────────────
+function collides(o) {
+  const pad = 6;
+  const py = player.y;
+  const ph = player.h;
+  return (
+    player.x + pad < o.x + o.w &&
+    player.x + player.w - pad > o.x &&
+    py + pad < o.y + o.h &&
+    py + ph > o.y + pad
+  );
+}
+
+// ── Game loop ──────────────────────────────────────────────
+function update() {
+  if (state !== "running") return;
+  frameCount++;
+  if (frameCount % 6 === 0) score++;
+  speed = 5 + Math.floor(score / 200) * 0.5;
+  scoreEl.textContent = score;
+
+  const wasJumping = player.jumping;
+  player.vy += 0.8;
+  player.y += player.vy;
+  const landY = player.ducking ? GROUND_Y + (PLAYER_H - DUCK_H) : GROUND_Y;
+  if (player.y >= landY) { player.y = landY; player.vy = 0; player.jumping = false; }
+  // cancel duck while airborne
+  if (player.jumping && player.ducking) stopDuck();
+
+  // Landing dust particles
+  if (wasJumping && !player.jumping) {
+    spawnParticles(player.x + player.w / 2, GROUND_Y + PLAYER_H, "#a0845e", 7);
+  }
+  // Running dust particles
+  if (state === "running" && !player.jumping && !player.ducking && frameCount % 8 === 0) {
+    spawnParticles(player.x + player.w / 2 - 5, GROUND_Y + PLAYER_H, "#b89a6e", 2);
+  }
+
+  scrollX += speed;
+
+  obstacleTimer--;
+  if (obstacleTimer <= 0) spawnObstacle();
+  obstacles.forEach(o => { o.x -= speed; });
+  obstacles = obstacles.filter(o => o.x + o.w > 0);
+
+  airTimer--;
+  if (airTimer <= 0) spawnAirObstacle();
+  airObstacles.forEach(o => { o.x -= speed; });
+  airObstacles = airObstacles.filter(o => o.x + o.w > 0);
+
+  coinTimer--;
+  if (coinTimer <= 0) spawnCoins();
+  coins.forEach(c => { c.x -= speed; });
+  coins.forEach(c => {
+    if (collectCoin(c)) {
+      c.collected = true; score += 5; coinCount++; missionProgress.totalCoins++;
+      scoreEl.textContent = score; coinEl.textContent = coinCount; saveProgress();
+      spawnParticles(c.x, c.y, "#ffd700", 5);
+    }
+  });
+  coins = coins.filter(c => c.x + c.r > 0 && !c.collected);
+
+  // Track ducking past air obstacles
+  airObstacles.forEach(o => {
+    if (!o.ducked && player.ducking && player.x + player.w > o.x && player.x < o.x + o.w) {
+      o.ducked = true;
+      missionProgress.totalDucks++;
+      saveProgress();
+    }
+  });
+
+  // Update mission progress for score and unlocked chars
+  missionProgress.bestScore = Math.max(missionProgress.bestScore, score);
+  missionProgress.unlockedCharCount = unlockedChars.size;
+
+  if (obstacles.some(collides) || airObstacles.some(collidesAir)) {
+    state = "dead";
+    spawnParticles(player.x + player.w / 2, player.y + player.h / 2, "#ff4444", 12);
+    spawnParticles(player.x + player.w / 2, player.y + player.h / 2, "#ff8800", 6);
+    if (score > hiScore) { hiScore = score; hiEl.textContent = hiScore; }
+    saveProgress();
+    msgEl.textContent = "";
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const bg = getBg();
+  bg.drawSky(ctx, canvas.width, GROUND_Y, scrollX);
+  bg.drawScenery(ctx, canvas.width, GROUND_Y, player.h, frameCount, scrollX);
+  bg.drawGround(ctx, canvas.width, canvas.height, GROUND_Y, player.h, scrollX);
+  obstacles.forEach(o => bg.drawObstacle(ctx, o));
+  airObstacles.forEach(drawAirObstacle);
+  coins.forEach(drawCoin);
+  const ch = getChar();
+  const drawY = player.y;
+  const drawH = player.h;
+  const drawW = player.ducking ? player.w * 1.3 : player.w;
+  if (player.ducking) {
+    // squashed/wide duck pose
+    ctx.save();
+    ctx.translate(player.x + player.w / 2, drawY + drawH);
+    ctx.scale(1.3, DUCK_H / PLAYER_H);
+    ctx.translate(-(player.x + player.w / 2), -(drawY + drawH));
+    ch.draw(ctx, player.x, drawY, player.w, PLAYER_H, frameCount, true, false, ch.palette);
+    ctx.restore();
+  } else if (state === "running" && !player.jumping) {
+    // slight forward lean and bob when running
+    const bob = Math.sin(frameCount * 0.35) * 1.5;
+    ctx.save();
+    ctx.translate(player.x + player.w / 2, drawY + drawH);
+    ctx.rotate(0.06);
+    ctx.translate(-(player.x + player.w / 2), -(drawY + drawH));
+    ch.draw(ctx, player.x, drawY + bob, player.w, drawH, frameCount, true, false, ch.palette);
+    ctx.restore();
+  } else {
+    ch.draw(ctx, player.x, drawY, player.w, drawH, frameCount, state === "running", player.jumping, ch.palette);
+  }
+  // Draw hat on character
+  const hat = getHat();
+  if (hat) {
+    if (player.ducking) {
+      ctx.save();
+      ctx.translate(player.x + player.w / 2, drawY + drawH);
+      ctx.scale(1.3, DUCK_H / PLAYER_H);
+      ctx.translate(-(player.x + player.w / 2), -(drawY + drawH));
+      hat.draw(ctx, player.x, drawY, player.w);
+      ctx.restore();
+    } else if (state === "running" && !player.jumping) {
+      const bob = Math.sin(frameCount * 0.35) * 1.5;
+      ctx.save();
+      ctx.translate(player.x + player.w / 2, drawY + drawH);
+      ctx.rotate(0.06);
+      ctx.translate(-(player.x + player.w / 2), -(drawY + drawH));
+      hat.draw(ctx, player.x, drawY + bob, player.w);
+      ctx.restore();
+    } else {
+      hat.draw(ctx, player.x, drawY, player.w);
+    }
+  }
+  // Draw particles
+  drawParticles();
+  drawOverlay();
+}
+
+function loop() { update(); updateParticles(); draw(); requestAnimationFrame(loop); }
+
+// ── Input ──────────────────────────────────────────────────
+function handleInput() {
+  if (modal.classList.contains("hidden") && document.getElementById("store-modal").classList.contains("hidden") && document.getElementById("missions-modal").classList.contains("hidden")) {
+    if (state === "idle" || state === "dead") startGame();
+    else if (state === "running") jump();
+  }
+}
+
+document.addEventListener("keydown", e => {
+  if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); handleInput(); }
+  if (e.code === "ArrowDown") { e.preventDefault(); if (state === "running") startDuck(); }
+});
+document.addEventListener("keyup", e => {
+  if (e.code === "ArrowDown") { stopDuck(); }
+});
+canvas.addEventListener("click", handleInput);
+canvas.addEventListener("touchstart", e => { e.preventDefault(); handleInput(); }, { passive: false });
+
+// ── Start / Reset ──────────────────────────────────────────
+function startGame() {
+  score = 0; frameCount = 0; speed = 5; scrollX = 0;
+  obstacles = []; obstacleTimer = 60;
+  coins = []; coinTimer = 40;
+  particles = [];
+  player.y = GROUND_Y; player.vy = 0; player.jumping = false; player.ducking = false; player.h = PLAYER_H;
+  airObstacles = []; airTimer = 120;
+  scoreEl.textContent = 0;
+  state = "running";
+  msgEl.textContent = "SPACE / tap to jump";
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CHARACTER MODAL
+// ═══════════════════════════════════════════════════════════
+const GROUP_EMOJIS = { Bunny: "🐰", Fox: "🦊", Cat: "🐱", Dog: "🐶", Frog: "🐸", Bear: "🐻", Penguin: "🐧", Hedgehog: "🦔", Panda: "🐼", Seasonal: "🎄" };
+
+function buildGrid(filter = "") {
+  gridEl.innerHTML = "";
+  const q = filter.toLowerCase().trim();
+  // Only show owned characters in customize modal
+  const owned = CHARACTERS.filter(c => unlockedChars.has(c.id));
+  const filtered = owned.filter(c => c.name.toLowerCase().includes(q) || (c.group && c.group.toLowerCase().includes(q)));
+  if (!filtered.length) {
+    gridEl.innerHTML = `<div id="no-results">No characters found</div>`;
+    return;
+  }
+  // Group by group field
+  const groups = [];
+  const seen = new Set();
+  filtered.forEach(c => {
+    const g = c.group || "Other";
+    if (!seen.has(g)) { seen.add(g); groups.push(g); }
+  });
+  groups.forEach(g => {
+    const members = filtered.filter(c => (c.group || "Other") === g);
+    if (!members.length) return;
+    const label = document.createElement("div");
+    label.className = "char-group-label";
+    label.textContent = `${GROUP_EMOJIS[g] || ""} ${g}`;
+    gridEl.appendChild(label);
+    const subGrid = document.createElement("div");
+    subGrid.className = "char-group-grid";
+    members.forEach(c => {
+      const card = document.createElement("div");
+      card.className = "char-card" + (c.id === selectedCharId ? " selected" : "");
+      card.innerHTML = `<span class="price-tag owned">OWNED</span><span class="char-icon">${c.emoji}</span><div class="char-name">${c.name}</div>`;
+      card.addEventListener("click", () => {
+        selectedCharId = c.id;
+        gridEl.querySelectorAll(".char-card").forEach(el => el.classList.remove("selected"));
+        card.classList.add("selected");
+      });
+      subGrid.appendChild(card);
+    });
+    gridEl.appendChild(subGrid);
+  });
+}
+
+function buildBgGrid() {
+  const bgGridEl = document.getElementById("bg-grid");
+  bgGridEl.innerHTML = "";
+  BACKGROUNDS.forEach(b => {
+    const owned = unlockedBgs.has(b.id);
+    const card = document.createElement("div");
+    card.className = "bg-card" + (b.id === selectedBgId ? " selected" : "") + (!owned ? " locked" : "");
+    let priceHTML = "";
+    if (b.price === 0) priceHTML = `<span class="price-tag free">FREE</span>`;
+    else if (owned) priceHTML = `<span class="price-tag owned">OWNED</span>`;
+    else priceHTML = `<span class="price-tag">$${b.price}</span>`;
+    card.innerHTML = `${priceHTML}<span class="bg-icon">${b.emoji}</span><div class="bg-name">${b.name}</div>`;
+    card.addEventListener("click", () => {
+      if (!owned) {
+        if (coinCount >= b.price) {
+          coinCount -= b.price;
+          coinEl.textContent = coinCount;
+          updateModalCoins();
+          unlockedBgs.add(b.id);
+          saveProgress();
+          selectedBgId = b.id;
+          buildBgGrid();
+        } else {
+          card.style.animation = "none"; card.offsetHeight;
+          card.style.animation = "shake 0.3s";
+        }
+        return;
+      }
+      selectedBgId = b.id;
+      bgGridEl.querySelectorAll(".bg-card").forEach(el => el.classList.remove("selected"));
+      card.classList.add("selected");
+    });
+    bgGridEl.appendChild(card);
+  });
+}
+
+function updateModalCoins() { document.getElementById("modal-coins").textContent = "COINS: " + coinCount; }
+function openModal() {
+  if (state === "running") state = "idle";
+  modal.classList.remove("hidden");
+  searchEl.value = "";
+  updateModalCoins();
+  buildGrid();
+  buildBgGrid();
+  setTimeout(() => searchEl.focus(), 80);
+}
+
+function closeModal() {
+  modal.classList.add("hidden");
+}
+
+searchEl.addEventListener("input", () => buildGrid(searchEl.value));
+
+playBtn.addEventListener("click", () => {
+  closeModal();
+  startGame();
+});
+
+changeBtn.addEventListener("click", openModal);
+
+// Close on backdrop click
+modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
+
+// ═══════════════════════════════════════════════════════════
+//  STORE MODAL
+// ═══════════════════════════════════════════════════════════
+const storeModal = document.getElementById("store-modal");
+const storeBtn = document.getElementById("store-btn");
+const storeCloseBtn = document.getElementById("store-close-btn");
+
+function updateStoreCoins() { document.getElementById("store-coins").textContent = "COINS: " + coinCount; }
+
+const storeCharSearch = document.getElementById("store-char-search");
+const storeCharGrid = document.getElementById("store-char-grid");
+
+function buildStoreCharGrid(filter = "") {
+  storeCharGrid.innerHTML = "";
+  const q = filter.toLowerCase().trim();
+  // Show all characters (variants with price > 0 for purchase, base ones shown as owned)
+  const filtered = CHARACTERS.filter(c => c.name.toLowerCase().includes(q) || (c.group && c.group.toLowerCase().includes(q)));
+  if (!filtered.length) {
+    storeCharGrid.innerHTML = `<div id="no-results">No characters found</div>`;
+    return;
+  }
+  const groups = [];
+  const seen = new Set();
+  filtered.forEach(c => {
+    const g = c.group || "Other";
+    if (!seen.has(g)) { seen.add(g); groups.push(g); }
+  });
+  groups.forEach(g => {
+    const members = filtered.filter(c => (c.group || "Other") === g);
+    if (!members.length) return;
+    const label = document.createElement("div");
+    label.className = "char-group-label";
+    label.textContent = `${GROUP_EMOJIS[g] || ""} ${g}`;
+    storeCharGrid.appendChild(label);
+    const subGrid = document.createElement("div");
+    subGrid.className = "char-group-grid";
+    members.forEach(c => {
+      const owned = unlockedChars.has(c.id);
+      const card = document.createElement("div");
+      card.className = "char-card" + (c.id === selectedCharId ? " selected" : "") + (!owned ? " locked" : "");
+      let priceHTML = "";
+      if (c.price === 0) priceHTML = `<span class="price-tag free">FREE</span>`;
+      else if (owned) priceHTML = `<span class="price-tag owned">OWNED</span>`;
+      else priceHTML = `<span class="price-tag">$${c.price}</span>`;
+      card.innerHTML = `${priceHTML}<span class="char-icon">${c.emoji}</span><div class="char-name">${c.name}</div>`;
+      card.addEventListener("click", () => {
+        if (!owned) {
+          if (coinCount >= c.price) {
+            coinCount -= c.price;
+            coinEl.textContent = coinCount;
+            updateStoreCoins();
+            unlockedChars.add(c.id);
+            selectedCharId = c.id;
+            saveProgress();
+            buildStoreCharGrid(storeCharSearch.value);
+          } else {
+            card.style.animation = "none"; card.offsetHeight;
+            card.style.animation = "shake 0.3s";
+          }
+          return;
+        }
+        selectedCharId = c.id;
+        storeCharGrid.querySelectorAll(".char-card").forEach(el => el.classList.remove("selected"));
+        card.classList.add("selected");
+      });
+      subGrid.appendChild(card);
+    });
+    storeCharGrid.appendChild(subGrid);
+  });
+}
+
+storeCharSearch.addEventListener("input", () => buildStoreCharGrid(storeCharSearch.value));
+
+function buildHatGrid() {
+  const grid = document.getElementById("hat-grid");
+  grid.innerHTML = "";
+  HATS.forEach(h => {
+    const owned = unlockedHats.has(h.id);
+    const card = document.createElement("div");
+    card.className = "hat-card" + (h.id === selectedHatId ? " selected" : "") + (!owned ? " locked" : "");
+    let priceHTML = "";
+    if (owned) priceHTML = `<span class="price-tag owned">OWNED</span>`;
+    else priceHTML = `<span class="price-tag">$${h.price}</span>`;
+    card.innerHTML = `${priceHTML}<span class="hat-icon">${h.emoji}</span><div class="hat-name">${h.name}</div>`;
+    card.addEventListener("click", () => {
+      if (!owned) {
+        if (coinCount >= h.price) {
+          coinCount -= h.price;
+          coinEl.textContent = coinCount;
+          updateStoreCoins();
+          unlockedHats.add(h.id);
+          selectedHatId = h.id;
+          saveProgress();
+          buildHatGrid();
+        } else {
+          card.style.animation = "none"; card.offsetHeight;
+          card.style.animation = "shake 0.3s";
+        }
+        return;
+      }
+      // Toggle selection: click again to remove hat
+      if (selectedHatId === h.id) {
+        selectedHatId = null;
+      } else {
+        selectedHatId = h.id;
+      }
+      saveProgress();
+      buildHatGrid();
+    });
+    grid.appendChild(card);
+  });
+}
+
+function buildMissionList() {
+  const list = document.getElementById("mission-list");
+  list.innerHTML = "";
+  MISSIONS.forEach(m => {
+    const completed = completedMissions.has(m.id);
+    const progress = Math.min(missionProgress[m.key] || 0, m.goal);
+    const pct = Math.floor((progress / m.goal) * 100);
+    const canClaim = !completed && progress >= m.goal;
+
+    const row = document.createElement("div");
+    row.className = "mission-row";
+    row.innerHTML = `
+      <div class="mission-info">
+        <div class="mission-name">${m.name}</div>
+        <div class="mission-desc">${m.desc}</div>
+        <div class="mission-bar"><div class="mission-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="mission-reward">🪙 ${m.reward}</div>
+      ${completed ? '<div class="mission-done">DONE ✓</div>' :
+        canClaim ? '<button class="mission-claim-btn">CLAIM</button>' :
+        `<div style="font-size:10px;color:#aaa;">${progress}/${m.goal}</div>`}
+    `;
+    if (canClaim) {
+      row.querySelector(".mission-claim-btn").addEventListener("click", () => {
+        completedMissions.add(m.id);
+        coinCount += m.reward;
+        coinEl.textContent = coinCount;
+        updateStoreCoins();
+        saveProgress();
+        buildMissionList();
+      });
+    }
+    list.appendChild(row);
+  });
+}
+
+function openStore() {
+  if (state === "running") state = "idle";
+  storeModal.classList.remove("hidden");
+  storeCharSearch.value = "";
+  updateStoreCoins();
+  buildStoreCharGrid();
+  buildHatGrid();
+}
+
+function closeStore() {
+  storeModal.classList.add("hidden");
+}
+
+storeBtn.addEventListener("click", openStore);
+storeCloseBtn.addEventListener("click", closeStore);
+storeModal.addEventListener("click", e => { if (e.target === storeModal) closeStore(); });
+
+// ═══════════════════════════════════════════════════════════
+//  MISSIONS MODAL
+// ═══════════════════════════════════════════════════════════
+const missionsModal = document.getElementById("missions-modal");
+const missionsBtn = document.getElementById("missions-btn");
+const missionsCloseBtn = document.getElementById("missions-close-btn");
+
+function openMissions() {
+  if (state === "running") state = "idle";
+  missionsModal.classList.remove("hidden");
+  buildMissionList();
+}
+
+function closeMissions() {
+  missionsModal.classList.add("hidden");
+}
+
+missionsBtn.addEventListener("click", openMissions);
+missionsCloseBtn.addEventListener("click", closeMissions);
+missionsModal.addEventListener("click", e => { if (e.target === missionsModal) closeMissions(); });
+
+// ═══════════════════════════════════════════════════════════
+//  DAILY LOGIN REWARD
+// ═══════════════════════════════════════════════════════════
+let dailyRewardPending = null; // { streak, reward } if reward available
+
+function checkDailyReward() {
+  const today = new Date().toISOString().slice(0, 10);
+  const lastLogin = localStorage.getItem("dinoLastLogin");
+  let streak = parseInt(localStorage.getItem("dinoLoginStreak")) || 0;
+
+  if (lastLogin === today) return; // already claimed today
+
+  if (lastLogin) {
+    const last = new Date(lastLogin);
+    const now = new Date(today);
+    const diffDays = Math.round((now - last) / (1000 * 60 * 60 * 24));
+    if (diffDays === 1) {
+      streak = Math.min(streak + 1, 7);
+    } else {
+      streak = 1;
+    }
+  } else {
+    streak = 1;
+  }
+
+  const reward = 10 + (streak - 1) * 5;
+  dailyRewardPending = { streak, reward };
+  showDailyReward(streak, reward);
+}
+
+function showDailyReward(streak, reward) {
+  const modal = document.getElementById("daily-reward-modal");
+  const dotsEl = document.getElementById("streak-dots");
+  const amountEl = document.getElementById("daily-reward-amount");
+
+  dotsEl.innerHTML = "";
+  for (let i = 1; i <= 7; i++) {
+    const dot = document.createElement("div");
+    dot.className = "streak-dot";
+    if (i < streak) dot.classList.add("filled");
+    if (i === streak) dot.classList.add("current");
+    dot.textContent = i;
+    dotsEl.appendChild(dot);
+  }
+
+  amountEl.textContent = `🪙 +${reward} coins!`;
+  modal.classList.remove("hidden");
+}
+
+document.getElementById("daily-reward-claim").addEventListener("click", () => {
+  if (!dailyRewardPending) return;
+  const { streak, reward } = dailyRewardPending;
+  coinCount += reward;
+  coinEl.textContent = coinCount;
+  localStorage.setItem("dinoLastLogin", new Date().toISOString().slice(0, 10));
+  localStorage.setItem("dinoLoginStreak", streak);
+  saveProgress();
+  spawnParticles(400, 130, "#ffd700", 20);
+  dailyRewardPending = null;
+  document.getElementById("daily-reward-modal").classList.add("hidden");
+});
+
+// ═══════════════════════════════════════════════════════════
+//  BACKGROUND MUSIC (Procedural Web Audio)
+// ═══════════════════════════════════════════════════════════
+let musicCtx = null;
+let musicPlaying = false;
+let musicOn = localStorage.getItem("dinoMusicOn") !== "false"; // default on
+let musicInitialized = false;
+let musicGain = null;
+let musicInterval = null;
+
+const MELODY_NOTES = [
+  // Pentatonic in C: C4, D4, E4, G4, A4
+  261.63, 293.66, 329.63, 392.00, 440.00,
+  // Octave up: C5, D5, E5, G5, A5
+  523.25, 587.33, 659.25, 783.99, 880.00
+];
+
+// 8-bar melody pattern (note indices into MELODY_NOTES)
+const MELODY_PATTERN = [
+  0, 2, 4, 5, 4, 2, 3, 4,
+  2, 0, 3, 2, 4, 5, 7, 5,
+  4, 2, 0, 2, 3, 4, 2, 0,
+  5, 4, 2, 3, 2, 0, 2, 4
+];
+
+const BASS_PATTERN = [
+  0, 0, 3, 3, 4, 4, 2, 2,
+  0, 0, 2, 2, 3, 3, 0, 0,
+  4, 4, 3, 3, 2, 2, 0, 0,
+  3, 3, 4, 4, 2, 2, 0, 0
+];
+
+function initMusic() {
+  if (musicInitialized) return;
+  musicInitialized = true;
+  try {
+    musicCtx = new (window.AudioContext || window.webkitAudioContext)();
+    musicGain = musicCtx.createGain();
+    musicGain.connect(musicCtx.destination);
+    musicGain.gain.value = musicOn ? 0.15 : 0;
+    startMelodyLoop();
+  } catch(e) {}
+}
+
+function playNote(freq, startTime, duration, type, gainVal) {
+  if (!musicCtx) return;
+  const osc = musicCtx.createOscillator();
+  const noteGain = musicCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  noteGain.gain.setValueAtTime(0, startTime);
+  noteGain.gain.linearRampToValueAtTime(gainVal, startTime + 0.05);
+  noteGain.gain.setValueAtTime(gainVal, startTime + duration - 0.08);
+  noteGain.gain.linearRampToValueAtTime(0, startTime + duration);
+  osc.connect(noteGain);
+  noteGain.connect(musicGain);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+function scheduleLoop() {
+  if (!musicCtx) return;
+  const bpm = 120;
+  const beatDur = 60 / bpm;
+  const now = musicCtx.currentTime + 0.1;
+
+  for (let i = 0; i < MELODY_PATTERN.length; i++) {
+    const t = now + i * beatDur;
+    // Melody voice (sine)
+    playNote(MELODY_NOTES[MELODY_PATTERN[i]], t, beatDur * 0.85, "sine", 0.35);
+    // Bass voice (triangle, octave lower)
+    playNote(MELODY_NOTES[BASS_PATTERN[i]] / 2, t, beatDur * 0.9, "triangle", 0.25);
+  }
+}
+
+function startMelodyLoop() {
+  scheduleLoop();
+  const bpm = 120;
+  const loopDuration = (60 / bpm) * MELODY_PATTERN.length * 1000;
+  musicInterval = setInterval(scheduleLoop, loopDuration - 100);
+  musicPlaying = true;
+}
+
+function toggleMusic() {
+  musicOn = !musicOn;
+  localStorage.setItem("dinoMusicOn", musicOn);
+  if (musicGain) {
+    musicGain.gain.value = musicOn ? 0.15 : 0;
+  }
+  document.getElementById("music-toggle").textContent = musicOn ? "🔊" : "🔇";
+}
+
+// Music toggle button
+document.getElementById("music-toggle").addEventListener("click", () => {
+  initMusic();
+  toggleMusic();
+});
+document.getElementById("music-toggle").textContent = musicOn ? "🔊" : "🔇";
+
+// Auto-start music on first user interaction
+document.addEventListener("click", function startMusicOnce() {
+  initMusic();
+  document.removeEventListener("click", startMusicOnce);
+}, { once: true });
+
+// ── Init ───────────────────────────────────────────────────
+buildGrid();
+buildBgGrid();
+hiEl.textContent = hiScore;
+checkDailyReward();
+loop();
+</script>
+</body>
+</html>
