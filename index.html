@@ -2,51 +2,61 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Dino Jump</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: #e0e0e0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
+      background: #111;
       font-family: 'Courier New', monospace;
       overflow: hidden;
+      width: 100vw;
+      height: 100vh;
     }
-    #hud {
+    #game-wrapper {
+      position: fixed;
+      inset: 0;
       display: flex;
       align-items: center;
-      gap: 18px;
-      margin-bottom: 10px;
+      justify-content: center;
+    }
+    #hud {
+      position: fixed;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      z-index: 50;
+      background: rgba(0,0,0,0.5);
+      padding: 6px 18px;
+      border-radius: 12px;
+      backdrop-filter: blur(4px);
     }
     #score-display {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: bold;
-      color: #333;
+      color: #fff;
       letter-spacing: 2px;
     }
     #change-char-btn {
-      padding: 6px 14px;
-      background: #fff;
-      border: 2px solid #888;
+      padding: 5px 12px;
+      background: rgba(255,255,255,0.15);
+      border: 2px solid rgba(255,255,255,0.3);
       border-radius: 8px;
       font-family: 'Courier New', monospace;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: bold;
       cursor: pointer;
-      color: #444;
+      color: #fff;
       transition: all 0.15s;
     }
-    #change-char-btn:hover { background: #f0f0f0; border-color: #555; }
+    #change-char-btn:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5); }
     canvas {
-      border: 3px solid #555;
-      border-radius: 8px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
       display: block;
     }
-    #message { margin-top: 10px; font-size: 15px; color: #444; height: 20px; }
+    #message { position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 14px; color: #aaa; height: 20px; z-index: 50; }
 
     /* ── Modal ── */
     #char-modal {
@@ -278,18 +288,18 @@
     .mission-claim-btn:hover { background: #43a047; }
     .mission-done { font-size: 10px; color: #888; font-weight: bold; }
     #store-btn {
-      padding: 6px 14px;
-      background: #fff;
-      border: 2px solid #d4a017;
+      padding: 5px 12px;
+      background: rgba(212,160,23,0.15);
+      border: 2px solid rgba(212,160,23,0.5);
       border-radius: 8px;
       font-family: 'Courier New', monospace;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: bold;
       cursor: pointer;
-      color: #d4a017;
+      color: #ffd54f;
       transition: all 0.15s;
     }
-    #store-btn:hover { background: #fff8e1; border-color: #b8860b; }
+    #store-btn:hover { background: rgba(212,160,23,0.3); border-color: #d4a017; }
     #store-close-btn {
       padding: 13px;
       background: #757575;
@@ -332,18 +342,18 @@
     }
     #missions-panel h2 { text-align: center; font-size: 20px; color: #222; letter-spacing: 1px; }
     #missions-btn {
-      padding: 6px 14px;
-      background: #fff;
-      border: 2px solid #4CAF50;
+      padding: 5px 12px;
+      background: rgba(76,175,80,0.15);
+      border: 2px solid rgba(76,175,80,0.5);
       border-radius: 8px;
       font-family: 'Courier New', monospace;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: bold;
       cursor: pointer;
-      color: #4CAF50;
+      color: #81c784;
       transition: all 0.15s;
     }
-    #missions-btn:hover { background: #e8f5e9; border-color: #388e3c; }
+    #missions-btn:hover { background: rgba(76,175,80,0.3); border-color: #4CAF50; }
     #missions-close-btn {
       padding: 13px;
       background: #757575;
@@ -445,17 +455,17 @@
       width: 38px;
       height: 38px;
       border-radius: 50%;
-      border: 2px solid #aaa;
-      background: #fff;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: rgba(0,0,0,0.5);
       font-size: 18px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.15s;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
-    #music-toggle:hover { background: #f0f0f0; border-color: #777; }
+    #music-toggle:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.5); }
   </style>
 </head>
 <body>
@@ -510,13 +520,15 @@
 <!-- Music toggle -->
 <button id="music-toggle" title="Toggle music">🔇</button>
 
+<div id="game-wrapper">
+  <canvas id="gameCanvas"></canvas>
+</div>
 <div id="hud">
-  <div id="score-display">SCORE: <span id="score">0</span> &nbsp; HI: <span id="hi">0</span> &nbsp; <span style="color:#d4a017">COINS: <span id="coincount">0</span></span></div>
+  <div id="score-display">SCORE: <span id="score">0</span> &nbsp; HI: <span id="hi">0</span> &nbsp; <span style="color:#ffd54f">COINS: <span id="coincount">0</span></span></div>
   <button id="change-char-btn">✏️ Customize</button>
   <button id="store-btn">🏪 Store</button>
   <button id="missions-btn">🗺️ Missions</button>
 </div>
-<canvas id="gameCanvas" width="800" height="260"></canvas>
 <div id="message"></div>
 
 <script>
@@ -2167,6 +2179,7 @@ const getBg = () => BACKGROUNDS.find(b => b.id === selectedBgId);
 // ═══════════════════════════════════════════════════════════
 const canvas   = document.getElementById("gameCanvas");
 const ctx      = canvas.getContext("2d");
+
 const scoreEl  = document.getElementById("score");
 const hiEl     = document.getElementById("hi");
 const msgEl    = document.getElementById("message");
@@ -2176,7 +2189,7 @@ const gridEl   = document.getElementById("char-grid");
 const playBtn  = document.getElementById("char-play-btn");
 const changeBtn= document.getElementById("change-char-btn");
 
-const GROUND_Y = 200;
+let GROUND_Y = 200;
 let state = "idle";
 let score = 0, frameCount = 0, speed = 5;
 let coinCount = parseInt(localStorage.getItem("dinoCoins")) || 0;
@@ -2229,6 +2242,17 @@ let coins = [], coinTimer = 0;
 let scrollX = 0;
 
 let airObstacles = [], airTimer = 120;
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  GROUND_Y = canvas.height - 60;
+  if (player && !player.jumping) {
+    player.y = player.ducking ? GROUND_Y + (PLAYER_H - DUCK_H) : GROUND_Y;
+  }
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
 
 // ── Physics ────────────────────────────────────────────────
 function jump() {
@@ -2405,23 +2429,25 @@ function collectCoin(c) {
 // ── Drawing ────────────────────────────────────────────────
 
 function drawOverlay() {
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
   if (state === "idle") {
     ctx.fillStyle = "rgba(0,0,0,0.3)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     const ch = getChar();
     ctx.textAlign = "center";
     ctx.fillStyle = "#fff";
-    ctx.font = "bold 38px Courier New";
-    ctx.fillText(`${ch.emoji} ${ch.name.toUpperCase()} JUMP`, canvas.width / 2, 108);
-    ctx.font = "18px Courier New";
+    ctx.font = "bold 42px Courier New";
+    ctx.fillText(`${ch.emoji} ${ch.name.toUpperCase()} JUMP`, cx, cy - 30);
+    ctx.font = "20px Courier New";
     ctx.fillStyle = "#ddd";
-    ctx.fillText("SPACE or tap to start", canvas.width / 2, 150);
+    ctx.fillText("SPACE or tap to start", cx, cy + 10);
     // Show power hint
     const pw = getCharPower();
     if (pw) {
-      ctx.font = "14px Courier New";
+      ctx.font = "16px Courier New";
       ctx.fillStyle = pw.color;
-      ctx.fillText(`[Q+Q] ${pw.name}`, canvas.width / 2, 175);
+      ctx.fillText(`[Q+Q] ${pw.name}`, cx, cy + 38);
     }
   }
   if (state === "dead") {
@@ -2429,17 +2455,17 @@ function drawOverlay() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.textAlign = "center";
     ctx.fillStyle = "#ff4444";
-    ctx.font = "bold 38px Courier New";
-    ctx.fillText("GAME OVER", canvas.width / 2, 105);
+    ctx.font = "bold 42px Courier New";
+    ctx.fillText("GAME OVER", cx, cy - 35);
     ctx.fillStyle = "#fff";
-    ctx.font = "22px Courier New";
-    ctx.fillText(`Score: ${score}`, canvas.width / 2, 140);
+    ctx.font = "24px Courier New";
+    ctx.fillText(`Score: ${score}`, cx, cy);
     ctx.fillStyle = "#ffd700";
+    ctx.font = "20px Courier New";
+    ctx.fillText(`Coins: ${coinCount}`, cx, cy + 28);
     ctx.font = "18px Courier New";
-    ctx.fillText(`Coins: ${coinCount}`, canvas.width / 2, 166);
-    ctx.font = "16px Courier New";
     ctx.fillStyle = "#ddd";
-    ctx.fillText("SPACE / tap to restart", canvas.width / 2, 194);
+    ctx.fillText("SPACE / tap to restart", cx, cy + 58);
   }
 }
 
