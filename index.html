@@ -2222,6 +2222,7 @@ let tongueTarget = null; // { x, y, timer }
 let spikeRollAngle = 0;
 let foxAfterimages = [];
 let iceSlideActive = false;
+let powerFlashTimer = 0, powerFlashName = ""; // activation banner
 
 let obstacles = [], obstacleTimer = 60;
 let coins = [], coinTimer = 0;
@@ -2556,6 +2557,7 @@ function update() {
     }
   }
   if (screenShakeTimer > 0) screenShakeTimer--;
+  if (powerFlashTimer > 0) powerFlashTimer--;
   // Decay fox afterimages
   foxAfterimages.forEach(a => a.alpha -= 0.05);
   foxAfterimages = foxAfterimages.filter(a => a.alpha > 0);
@@ -2780,11 +2782,14 @@ function drawPowerHUD() {
   if (!pw) return;
   const hx = 10, hy = 10;
 
-  // Power name + key hint
+  // HUD background
   ctx.textAlign = "left";
   ctx.font = "bold 11px Courier New";
-  ctx.fillStyle = "rgba(0,0,0,0.4)";
-  ctx.fillRect(hx - 2, hy - 2, 130, 38);
+  const hudH = powerActive ? 48 : 38;
+  ctx.fillStyle = "rgba(0,0,0,0.45)";
+  ctx.fillRect(hx - 2, hy - 2, 136, hudH);
+
+  // Power name + key hint
   ctx.fillStyle = pw.color;
   ctx.fillText("[Q+Q] " + pw.name, hx + 3, hy + 10);
 
@@ -2803,6 +2808,51 @@ function drawPowerHUD() {
     ctx.fillRect(barX, barY, barW, barH);
     ctx.fillStyle = pw.color;
     ctx.fillRect(barX, barY, barW * pct, barH);
+  }
+
+  // Active power duration bar
+  if (powerActive && powerTimer > 0) {
+    const origDur = pw.duration || 1;
+    const pct = powerTimer / origDur;
+    const barX = hx + 3, barY = hy + 38, barW = 128, barH = 6;
+    ctx.fillStyle = "rgba(255,255,255,0.15)";
+    ctx.fillRect(barX, barY, barW, barH);
+    // Pulsing active bar
+    const pulse = 0.7 + Math.sin(frameCount * 0.2) * 0.3;
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = pw.color;
+    ctx.fillRect(barX, barY, barW * pct, barH);
+    ctx.globalAlpha = 1;
+  }
+
+  // ── Big activation banner (center screen) ──
+  if (powerFlashTimer > 0) {
+    const alpha = Math.min(powerFlashTimer / 15, 1);
+    const scale = 1 + (45 - powerFlashTimer) * 0.008;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // Colored flash stripe across screen
+    ctx.fillStyle = pw.color;
+    ctx.globalAlpha = alpha * 0.15;
+    ctx.fillRect(0, canvas.height / 2 - 28, canvas.width, 56);
+
+    // Power name text
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = "center";
+    ctx.font = `bold ${Math.floor(26 * scale)}px Courier New`;
+    ctx.fillStyle = "#000";
+    ctx.fillText(powerFlashName.toUpperCase(), canvas.width / 2 + 2, canvas.height / 2 + 8);
+    ctx.fillStyle = pw.color;
+    ctx.fillText(powerFlashName.toUpperCase(), canvas.width / 2, canvas.height / 2 + 6);
+
+    // Sub-label
+    ctx.font = "bold 12px Courier New";
+    ctx.fillStyle = "#fff";
+    ctx.globalAlpha = alpha * 0.8;
+    ctx.fillText("POWER ACTIVATED!", canvas.width / 2, canvas.height / 2 + 22);
+
+    ctx.restore();
   }
 }
 
@@ -2859,6 +2909,8 @@ function activatePower() {
   if (!pw) return;
   powerCharges--;
   playPowerSfx();
+  powerFlashTimer = 45;
+  powerFlashName = pw.name;
 
   switch (group) {
     case "Bunny": powerBunny(); break;
@@ -2987,6 +3039,7 @@ function startGame() {
   lastQPress = 0; screenShakeTimer = 0; bambooShieldHP = 0;
   tongueTarget = null; spikeRollAngle = 0; foxAfterimages = [];
   iceSlideActive = false;
+  powerFlashTimer = 0; powerFlashName = "";
   scoreEl.textContent = 0;
   state = "running";
   msgEl.textContent = "SPACE / tap to jump";
