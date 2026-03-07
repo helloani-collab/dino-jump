@@ -471,7 +471,7 @@
 <body>
 
 <!-- Character select modal -->
-<div id="char-modal">
+<div id="char-modal" class="hidden">
   <div id="char-panel">
     <h2>🎮 Customize</h2>
     <div id="modal-coins" style="text-align:center;font-size:14px;font-weight:bold;color:#d4a017;margin-bottom:8px;">COINS: 0</div>
@@ -2223,9 +2223,13 @@ const coinEl = document.getElementById("coincount");
 coinEl.textContent = coinCount;
 hiEl.textContent = hiScore;
 
-const PLAYER_H = 52;
-const DUCK_H = 28;
-const player = { x: 100, y: GROUND_Y, w: 48, h: PLAYER_H, vy: 0, jumping: false, ducking: false };
+let gameScale = 1;
+const BASE_PLAYER_H = 52;
+const BASE_DUCK_H = 28;
+const BASE_PLAYER_W = 48;
+let PLAYER_H = BASE_PLAYER_H;
+let DUCK_H = BASE_DUCK_H;
+const player = { x: 150, y: GROUND_Y, w: BASE_PLAYER_W, h: PLAYER_H, vy: 0, jumping: false, ducking: false };
 
 // ── Power State ──
 let powerCharges = 0, powerActive = false, powerTimer = 0, powerCoinAccum = 0;
@@ -2246,8 +2250,14 @@ let airObstacles = [], airTimer = 120;
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  GROUND_Y = canvas.height - 60;
+  // Scale everything relative to the original 260px design height
+  gameScale = Math.max(canvas.height / 260, 1);
+  PLAYER_H = Math.round(BASE_PLAYER_H * gameScale);
+  DUCK_H = Math.round(BASE_DUCK_H * gameScale);
+  player.w = Math.round(BASE_PLAYER_W * gameScale);
+  GROUND_Y = canvas.height - Math.round(60 * gameScale);
   if (player && !player.jumping) {
+    player.h = player.ducking ? DUCK_H : PLAYER_H;
     player.y = player.ducking ? GROUND_Y + (PLAYER_H - DUCK_H) : GROUND_Y;
   }
 }
@@ -2256,7 +2266,7 @@ window.addEventListener("resize", resizeCanvas);
 
 // ── Physics ────────────────────────────────────────────────
 function jump() {
-  if (!player.jumping) { player.vy = -16; player.jumping = true; playJumpSfx(); }
+  if (!player.jumping) { player.vy = -16 * gameScale; player.jumping = true; playJumpSfx(); }
 }
 
 function startDuck() {
@@ -2278,8 +2288,8 @@ function stopDuck() {
 function spawnObstacle() {
   const bg = getBg();
   const ot = bg.obstacleTypes[Math.floor(Math.random() * bg.obstacleTypes.length)];
-  const h = ot.minH + Math.random() * (ot.maxH - ot.minH);
-  const w = ot.minW + Math.random() * (ot.maxW - ot.minW);
+  const h = (ot.minH + Math.random() * (ot.maxH - ot.minH)) * gameScale;
+  const w = (ot.minW + Math.random() * (ot.maxW - ot.minW)) * gameScale;
   obstacles.push({
     x: canvas.width + 20,
     y: GROUND_Y + PLAYER_H - h,
@@ -2294,11 +2304,11 @@ function spawnAirObstacle() {
   // air obstacles sit at head height — must duck to avoid
   const types = ["bird", "bat", "bee"];
   const type = types[Math.floor(Math.random() * types.length)];
-  const w = 30 + Math.random() * 14;
-  const h = 18 + Math.random() * 10;
+  const w = (30 + Math.random() * 14) * gameScale;
+  const h = (18 + Math.random() * 10) * gameScale;
   airObstacles.push({
     x: canvas.width + 20,
-    y: GROUND_Y - 8 + Math.random() * 12, // around head height
+    y: GROUND_Y - 8 * gameScale + Math.random() * 12 * gameScale,
     w, h, type,
   });
   airTimer = 100 + Math.random() * 140;
@@ -2392,9 +2402,10 @@ function spawnCoins() {
   const count = 2 + Math.floor(Math.random() * 4); // 2-5 coins in a row
   const startX = canvas.width + 20;
   const isHigh = Math.random() < 0.35; // some coin trails are up high (jump to get)
-  const cy = isHigh ? GROUND_Y - 20 : GROUND_Y + player.h - 18;
+  const cy = isHigh ? GROUND_Y - 20 * gameScale : GROUND_Y + player.h - 18 * gameScale;
+  const coinR = Math.round(8 * gameScale);
   for (let i = 0; i < count; i++) {
-    coins.push({ x: startX + i * 28, y: cy, r: 8, collected: false });
+    coins.push({ x: startX + i * 28 * gameScale, y: cy, r: coinR, collected: false });
   }
   coinTimer = 80 + Math.random() * 150;
 }
@@ -2487,11 +2498,11 @@ function update() {
   if (state !== "running") return;
   frameCount++;
   if (frameCount % 6 === 0) score++;
-  speed = 5 + Math.floor(score / 200) * 0.5;
+  speed = (5 + Math.floor(score / 200) * 0.5) * gameScale;
   scoreEl.textContent = score;
 
   const wasJumping = player.jumping;
-  player.vy += 0.8;
+  player.vy += 0.8 * gameScale;
   player.y += player.vy;
   const landY = player.ducking ? GROUND_Y + (PLAYER_H - DUCK_H) : GROUND_Y;
   if (player.y >= landY) { player.y = landY; player.vy = 0; player.jumping = false; }
@@ -2570,7 +2581,7 @@ function update() {
     }
     // Penguin speed boost
     if (group === "Penguin" && iceSlideActive) {
-      speed += 2;
+      speed += 2 * gameScale;
     }
     if (powerTimer <= 0) {
       powerActive = false;
@@ -2995,8 +3006,8 @@ function powerCat() {
 
 function powerDog() {
   // Push ALL on-screen obstacles back 200px
-  obstacles.forEach(o => { o.x += 200; });
-  airObstacles.forEach(o => { o.x += 200; });
+  obstacles.forEach(o => { o.x += 200 * gameScale; });
+  airObstacles.forEach(o => { o.x += 200 * gameScale; });
   spawnParticles(player.x + player.w / 2, player.y + player.h / 2, "#88bbff", 12);
 }
 
@@ -3052,7 +3063,7 @@ function powerPanda() {
 
 // ── Start / Reset ──────────────────────────────────────────
 function startGame() {
-  score = 0; frameCount = 0; speed = 5; scrollX = 0;
+  score = 0; frameCount = 0; speed = 5 * gameScale; scrollX = 0;
   obstacles = []; obstacleTimer = 60;
   coins = []; coinTimer = 40;
   particles = [];
