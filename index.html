@@ -466,6 +466,159 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
     #music-toggle:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.5); }
+
+    /* ── Creator Modal ── */
+    #creator-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 250;
+    }
+    #creator-modal.hidden { display: none; }
+    #creator-panel {
+      background: #fff;
+      border-radius: 18px;
+      padding: 22px 24px 20px;
+      width: 480px;
+      max-width: 96vw;
+      max-height: 92vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 16px 50px rgba(0,0,0,0.4);
+    }
+    #creator-panel h2 { text-align: center; font-size: 20px; color: #222; letter-spacing: 1px; }
+    #creator-name {
+      width: 100%;
+      padding: 9px 14px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: 'Courier New', monospace;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    #creator-name:focus { border-color: #777; }
+    #creator-shapes {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .shape-btn {
+      padding: 8px 4px;
+      border: 2.5px solid #e0e0e0;
+      border-radius: 10px;
+      background: #fafafa;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      font-weight: bold;
+      text-align: center;
+      transition: all 0.12s;
+    }
+    .shape-btn:hover { background: #f0f0f0; border-color: #bbb; }
+    .shape-btn.selected { border-color: #4CAF50; background: #e8f5e9; }
+    #creator-colors {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .color-row label {
+      font-size: 12px;
+      font-weight: bold;
+      color: #555;
+      text-transform: capitalize;
+      flex: 1;
+    }
+    .color-row input[type="color"] {
+      width: 36px;
+      height: 28px;
+      border: 2px solid #ccc;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 1px;
+    }
+    #creator-preview-wrap {
+      display: flex;
+      justify-content: center;
+    }
+    #creator-preview {
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      background: #f0f8ff;
+    }
+    #creator-create-btn {
+      padding: 13px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: background 0.15s;
+    }
+    #creator-create-btn:hover { background: #43a047; }
+    #creator-cancel-btn {
+      padding: 10px;
+      background: #757575;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: background 0.15s;
+    }
+    #creator-cancel-btn:hover { background: #616161; }
+    #create-char-store-btn {
+      padding: 10px;
+      background: linear-gradient(135deg, #ff9800, #f57c00);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: all 0.15s;
+      margin-bottom: 4px;
+    }
+    #create-char-store-btn:hover { background: linear-gradient(135deg, #f57c00, #e65100); }
+    .custom-delete-btn {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: none;
+      background: #e53935;
+      color: #fff;
+      font-size: 11px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .char-card:hover .custom-delete-btn { opacity: 1; }
   </style>
 </head>
 <body>
@@ -494,7 +647,27 @@
     <div id="store-char-grid"></div>
     <div class="section-label">Hats</div>
     <div id="hat-grid"></div>
+    <button id="create-char-store-btn" onclick="openCreator()">CREATE CHARACTER 🎨 (100 coins)</button>
     <button id="store-close-btn">CLOSE</button>
+  </div>
+</div>
+
+<!-- Creator modal -->
+<div id="creator-modal" class="hidden">
+  <div id="creator-panel">
+    <h2>🎨 Create Character</h2>
+    <div class="section-label">Name</div>
+    <input id="creator-name" type="text" placeholder="Character name..." maxlength="12" autocomplete="off" spellcheck="false" />
+    <div class="section-label">Base Shape</div>
+    <div id="creator-shapes"></div>
+    <div class="section-label">Colors</div>
+    <div id="creator-colors"></div>
+    <div class="section-label">Preview</div>
+    <div id="creator-preview-wrap">
+      <canvas id="creator-preview" width="120" height="120"></canvas>
+    </div>
+    <button id="creator-create-btn">CREATE! (100 coins)</button>
+    <button id="creator-cancel-btn">CANCEL</button>
   </div>
 </div>
 
@@ -978,6 +1151,41 @@ const CHARACTERS = [
   { id: "snowflake_penguin",name: "Snowflake Penguin",emoji: "🐧", draw: drawPenguin,  price: 180, group: "Seasonal", palette: { body: "#4488bb", belly: "#e8f4ff", beak: "#88bbdd", feet: "#6699bb", cheek: "#c0ddee" } },
 ];
 const unlockedChars = new Set(["bunny"]);
+
+// ── Custom Characters ──
+const SHAPE_DRAW_MAP = {
+  Bunny: drawBunny, Fox: drawFox, Cat: drawCat, Dog: drawDog,
+  Frog: drawFrog, Bear: drawBear, Penguin: drawPenguin, Hedgehog: drawHedgehog, Panda: drawPanda
+};
+const SHAPE_PALETTES = {
+  Bunny:    { body: "#f5f0eb", tail: "#fff", earInner: "#ffb6c1", eye: "#222", blush: "#ff9999", leg: "#e8e0d8" },
+  Fox:      { body: "#e8640a", belly: "#ffddc0", tailTip: "#fff", earTip: "#1a0a00", nose: "#1a0a00", leg: "#c0500a" },
+  Cat:      { body: "#888", stripe: "#555", earInner: "#d08080", eyeColor: "#88cc44", nose: "#ff8888", leg: "#666", tail: "#888" },
+  Dog:      { body: "#c8a050", ear: "#a08030", muzzle: "#f0dcc0", tongue: "#ff6688", nose: "#333", leg: "#a08030" },
+  Frog:     { body: "#4a8", belly: "#b0e8b0", leg: "#388", foot: "#277", pupil: "#111" },
+  Bear:     { body: "#8B5E3C", belly: "#c09060", leg: "#6d4a2e", nose: "#1a0a00" },
+  Penguin:  { body: "#2a2a3e", belly: "#f0f0f0", beak: "#ff8800", feet: "#333", cheek: "#ffd700" },
+  Hedgehog: { spine: "#8B6914", spineTip: "#5a4510", belly: "#e8d8b8", leg: "#a08050", nose: "#333" },
+  Panda:    { body: "#f0f0f0", patch: "#1a1a1a", nose: "#1a1a1a" }
+};
+let customChars = [];
+// Load custom characters from localStorage
+try {
+  const saved = JSON.parse(localStorage.getItem("dinoCustomChars"));
+  if (saved && Array.isArray(saved)) {
+    saved.forEach(s => {
+      const drawFn = SHAPE_DRAW_MAP[s.shapeKey];
+      if (!drawFn) return;
+      const charObj = {
+        id: s.id, name: s.name, emoji: "🎨", draw: drawFn,
+        price: 0, group: "Custom", palette: s.palette, shapeKey: s.shapeKey
+      };
+      customChars.push(charObj);
+      CHARACTERS.push(charObj);
+      unlockedChars.add(s.id);
+    });
+  }
+} catch(e) {}
 
 let selectedCharId = "bunny";
 const getChar = () => CHARACTERS.find(c => c.id === selectedCharId);
@@ -2203,6 +2411,9 @@ function saveProgress() {
   localStorage.setItem("dinoSelectedHat", selectedHatId || "");
   localStorage.setItem("dinoMissionProgress", JSON.stringify(missionProgress));
   localStorage.setItem("dinoCompletedMissions", JSON.stringify([...completedMissions]));
+  localStorage.setItem("dinoCustomChars", JSON.stringify(customChars.map(c => ({
+    id: c.id, name: c.name, shapeKey: c.shapeKey, palette: c.palette
+  }))));
 }
 // Load unlocked characters/backgrounds/hats/missions from storage
 try {
@@ -3142,7 +3353,7 @@ function startGame() {
 // ═══════════════════════════════════════════════════════════
 //  CHARACTER MODAL
 // ═══════════════════════════════════════════════════════════
-const GROUP_EMOJIS = { Bunny: "🐰", Fox: "🦊", Cat: "🐱", Dog: "🐶", Frog: "🐸", Bear: "🐻", Penguin: "🐧", Hedgehog: "🦔", Panda: "🐼", Seasonal: "🎄" };
+const GROUP_EMOJIS = { Bunny: "🐰", Fox: "🦊", Cat: "🐱", Dog: "🐶", Frog: "🐸", Bear: "🐻", Penguin: "🐧", Hedgehog: "🦔", Panda: "🐼", Seasonal: "🎄", Custom: "🎨" };
 
 function buildGrid(filter = "") {
   gridEl.innerHTML = "";
@@ -3293,6 +3504,17 @@ function buildStoreCharGrid(filter = "") {
       else if (owned) priceHTML = `<span class="price-tag owned">OWNED</span>`;
       else priceHTML = `<span class="price-tag">$${c.price}</span>`;
       card.innerHTML = `${priceHTML}<span class="char-icon">${c.emoji}</span><div class="char-name">${c.name}</div>`;
+      if (c.group === "Custom") {
+        const delBtn = document.createElement("button");
+        delBtn.className = "custom-delete-btn";
+        delBtn.textContent = "✕";
+        delBtn.title = "Delete custom character";
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          deleteCustomChar(c.id);
+        });
+        card.appendChild(delBtn);
+      }
       card.addEventListener("click", () => {
         if (!owned) {
           if (coinCount >= c.price) {
@@ -3754,6 +3976,124 @@ document.addEventListener("click", function initAudioOnce() {
   ensureAudio();
   document.removeEventListener("click", initAudioOnce);
 }, { once: true });
+
+// ═══════════════════════════════════════════════════════════
+//  CHARACTER CREATOR
+// ═══════════════════════════════════════════════════════════
+const creatorModal = document.getElementById("creator-modal");
+const creatorShapes = document.getElementById("creator-shapes");
+const creatorColors = document.getElementById("creator-colors");
+const creatorPreview = document.getElementById("creator-preview");
+const creatorNameInput = document.getElementById("creator-name");
+let creatorShape = "Bunny";
+let creatorPalette = {};
+
+function openCreator() {
+  creatorModal.classList.remove("hidden");
+  creatorNameInput.value = "";
+  creatorShape = "Bunny";
+  creatorPalette = { ...SHAPE_PALETTES.Bunny };
+  buildCreatorShapes();
+  buildCreatorColors();
+  updateCreatorPreview();
+}
+
+function closeCreator() {
+  creatorModal.classList.add("hidden");
+}
+
+document.getElementById("creator-cancel-btn").addEventListener("click", closeCreator);
+creatorModal.addEventListener("click", e => { if (e.target === creatorModal) closeCreator(); });
+
+function buildCreatorShapes() {
+  creatorShapes.innerHTML = "";
+  Object.keys(SHAPE_DRAW_MAP).forEach(key => {
+    const btn = document.createElement("button");
+    btn.className = "shape-btn" + (key === creatorShape ? " selected" : "");
+    btn.textContent = (GROUP_EMOJIS[key] || "") + " " + key;
+    btn.addEventListener("click", () => {
+      creatorShape = key;
+      creatorPalette = { ...SHAPE_PALETTES[key] };
+      creatorShapes.querySelectorAll(".shape-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      buildCreatorColors();
+      updateCreatorPreview();
+    });
+    creatorShapes.appendChild(btn);
+  });
+}
+
+function buildCreatorColors() {
+  creatorColors.innerHTML = "";
+  const pal = creatorPalette;
+  Object.keys(pal).forEach(prop => {
+    const row = document.createElement("div");
+    row.className = "color-row";
+    const lbl = document.createElement("label");
+    lbl.textContent = prop.replace(/([A-Z])/g, " $1").trim();
+    const inp = document.createElement("input");
+    inp.type = "color";
+    inp.value = pal[prop];
+    inp.addEventListener("input", () => {
+      creatorPalette[prop] = inp.value;
+      updateCreatorPreview();
+    });
+    row.appendChild(lbl);
+    row.appendChild(inp);
+    creatorColors.appendChild(row);
+  });
+}
+
+function updateCreatorPreview() {
+  const ctx = creatorPreview.getContext("2d");
+  ctx.clearRect(0, 0, 120, 120);
+  const drawFn = SHAPE_DRAW_MAP[creatorShape];
+  if (drawFn) {
+    drawFn(ctx, 20, 15, 80, 80, 0, false, false, creatorPalette);
+  }
+}
+
+document.getElementById("creator-create-btn").addEventListener("click", () => {
+  const name = creatorNameInput.value.trim();
+  if (!name) {
+    creatorNameInput.style.borderColor = "#e53935";
+    setTimeout(() => creatorNameInput.style.borderColor = "#ddd", 800);
+    return;
+  }
+  if (coinCount < 100) {
+    const btn = document.getElementById("creator-create-btn");
+    btn.style.animation = "none"; btn.offsetHeight;
+    btn.style.animation = "shake 0.3s";
+    return;
+  }
+  coinCount -= 100;
+  coinEl.textContent = coinCount;
+  const id = "custom_" + Date.now();
+  const drawFn = SHAPE_DRAW_MAP[creatorShape];
+  const charObj = {
+    id, name, emoji: "🎨", draw: drawFn,
+    price: 0, group: "Custom", palette: { ...creatorPalette }, shapeKey: creatorShape
+  };
+  customChars.push(charObj);
+  CHARACTERS.push(charObj);
+  unlockedChars.add(id);
+  selectedCharId = id;
+  saveProgress();
+  closeCreator();
+  updateStoreCoins();
+  buildStoreCharGrid(storeCharSearch.value);
+});
+
+function deleteCustomChar(id) {
+  customChars = customChars.filter(c => c.id !== id);
+  const idx = CHARACTERS.findIndex(c => c.id === id);
+  if (idx !== -1) CHARACTERS.splice(idx, 1);
+  unlockedChars.delete(id);
+  if (selectedCharId === id) selectedCharId = "bunny";
+  saveProgress();
+  buildStoreCharGrid(storeCharSearch.value);
+  buildGrid();
+}
 
 // ── Init ───────────────────────────────────────────────────
 buildGrid();
