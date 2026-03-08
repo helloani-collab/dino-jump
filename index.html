@@ -2260,7 +2260,12 @@ window.addEventListener("resize", resizeCanvas);
 
 // ── Physics ────────────────────────────────────────────────
 function jump() {
-  if (!player.jumping) { player.vy = -16; player.jumping = true; playJumpSfx(); }
+  if (!player.jumping) {
+    player.vy = -16; player.jumping = true; player.doubleJumped = false; playJumpSfx();
+  } else if (!player.doubleJumped) {
+    player.vy = -14; player.doubleJumped = true; playJumpSfx();
+    spawnParticles(player.x + player.w / 2, player.y + player.h, "#aaa", 5);
+  }
 }
 
 function startDuck() {
@@ -2498,7 +2503,7 @@ function update() {
   player.vy += 0.8;
   player.y += player.vy;
   const landY = player.ducking ? GROUND_Y + (PLAYER_H - DUCK_H) : GROUND_Y;
-  if (player.y >= landY) { player.y = landY; player.vy = 0; player.jumping = false; }
+  if (player.y >= landY) { player.y = landY; player.vy = 0; player.jumping = false; player.doubleJumped = false; }
   // cancel duck while airborne
   if (player.jumping && player.ducking) stopDuck();
 
