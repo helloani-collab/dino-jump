@@ -2451,7 +2451,7 @@ function drawOverlay() {
     if (pw) {
       ctx.font = "16px Courier New";
       ctx.fillStyle = pw.color;
-      ctx.fillText(`[Q+Q] ${pw.name}`, cx, cy + 38);
+      ctx.fillText(`[K+K] ${pw.name}`, cx, cy + 38);
     }
   }
   if (state === "dead") {
@@ -2823,7 +2823,7 @@ function drawPowerHUD() {
 
   // Power name + key hint
   ctx.fillStyle = pw.color;
-  ctx.fillText("[Q+Q] " + pw.name, hx + 4, hy + 13 * s);
+  ctx.fillText("[K+K] " + pw.name, hx + 4, hy + 13 * s);
 
   // Charge dots
   const dotY = hy + 24 * s;
@@ -2901,7 +2901,7 @@ function handleInput() {
 document.addEventListener("keydown", e => {
   if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); handleInput(); }
   if (e.code === "ArrowDown") { e.preventDefault(); if (state === "running") startDuck(); }
-  if (e.code === "KeyQ" && state === "running") {
+  if (e.code === "KeyK" && state === "running") {
     const now = performance.now();
     if (now - lastQPress < 300) {
       activatePower();
