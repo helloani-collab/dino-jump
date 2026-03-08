@@ -2239,6 +2239,7 @@ let foxAfterimages = [];
 let iceSlideActive = false;
 let powerFlashTimer = 0, powerFlashName = ""; // activation banner
 
+let lives = 3, hitInvincible = 0;
 let obstacles = [], obstacleTimer = 60;
 let coins = [], coinTimer = 0;
 let scrollX = 0;
@@ -2619,8 +2620,9 @@ function update() {
   const group = getEffectiveGroup();
   const foxImmune = group === "Fox" && powerActive;
   const hedgehogImmune = group === "Hedgehog" && powerActive;
-  let hitGround = !foxImmune && !hedgehogImmune && obstacles.some(collides);
-  let hitAir = !foxImmune && !hedgehogImmune && airObstacles.some(collidesAir);
+  const hitImmune = hitInvincible > 0;
+  let hitGround = !foxImmune && !hedgehogImmune && !hitImmune && obstacles.some(collides);
+  let hitAir = !foxImmune && !hedgehogImmune && !hitImmune && airObstacles.some(collidesAir);
 
   // Bamboo shield intercept
   if ((hitGround || hitAir) && bambooShieldHP > 0) {
@@ -2644,16 +2646,33 @@ function update() {
   }
 
   if (hitGround || hitAir) {
-    state = "dead";
-    powerActive = false; iceSlideActive = false;
-    stopMusic();
-    playBuzzer();
-    spawnParticles(player.x + player.w / 2, player.y + player.h / 2, "#ff4444", 12);
-    spawnParticles(player.x + player.w / 2, player.y + player.h / 2, "#ff8800", 6);
-    if (score > hiScore) { hiScore = score; hiEl.textContent = hiScore; }
-    saveProgress();
-    msgEl.textContent = "";
+    lives--;
+    if (lives > 0) {
+      // Lose a heart — brief invincibility + remove the obstacle that hit
+      hitInvincible = 90; // ~1.5 sec
+      playBuzzer();
+      spawnParticles(player.x + player.w / 2, player.y + player.h / 2, "#ff4444", 10);
+      if (hitGround) {
+        const hitObs = obstacles.find(collides);
+        if (hitObs) obstacles = obstacles.filter(o => o !== hitObs);
+      }
+      if (hitAir) {
+        const hitObs = airObstacles.find(collidesAir);
+        if (hitObs) airObstacles = airObstacles.filter(o => o !== hitObs);
+      }
+    } else {
+      state = "dead";
+      powerActive = false; iceSlideActive = false;
+      stopMusic();
+      playBuzzer();
+      spawnParticles(player.x + player.w / 2, player.y + player.h / 2, "#ff4444", 12);
+      spawnParticles(player.x + player.w / 2, player.y + player.h / 2, "#ff8800", 6);
+      if (score > hiScore) { hiScore = score; hiEl.textContent = hiScore; }
+      saveProgress();
+      msgEl.textContent = "";
+    }
   }
+  if (hitInvincible > 0) hitInvincible--;
 }
 
 function draw() {
@@ -2724,6 +2743,10 @@ function draw() {
   const drawH = player.h;
   const curGroup = getEffectiveGroup();
 
+  // Blink during hit invincibility
+  const blinkHidden = hitInvincible > 0 && Math.floor(frameCount / 3) % 2 === 0;
+  if (blinkHidden) { /* skip drawing player this frame */ }
+  else {
   // Fox afterimages
   if (curGroup === "Fox" && powerActive) {
     foxAfterimages.forEach(a => {
@@ -2800,6 +2823,8 @@ function draw() {
     }
   }
 
+  } // end blink check
+
   // Draw particles
   drawParticles();
 
@@ -2809,7 +2834,10 @@ function draw() {
   ctx.restore();
 
   // HUD + overlays drawn in screen coordinates (unscaled)
-  if (state === "running") drawPowerHUD();
+  if (state === "running") {
+    drawPowerHUD();
+    drawHearts();
+  }
   drawOverlay();
 }
 
@@ -2890,6 +2918,33 @@ function drawPowerHUD() {
     ctx.fillText("POWER ACTIVATED!", canvas.width / 2, canvas.height / 2 + 26 * bs);
 
     ctx.restore();
+  }
+}
+
+function drawHearts() {
+  const s = Math.min(gameScale * 0.6, 2.5);
+  const size = 14 * s;
+  const hx = canvas.width - 10 - 3 * (size + 6 * s);
+  const hy = 54;
+  for (let i = 0; i < 3; i++) {
+    const x = hx + i * (size + 6 * s);
+    const filled = i < lives;
+    ctx.fillStyle = filled ? "#ff4444" : "rgba(255,255,255,0.15)";
+    // Draw heart shape
+    ctx.beginPath();
+    const r = size / 4;
+    ctx.arc(x + r, hy + r, r, Math.PI, 0, false);
+    ctx.arc(x + 3 * r, hy + r, r, Math.PI, 0, false);
+    ctx.lineTo(x + size, hy + r + r * 0.5);
+    ctx.lineTo(x + size / 2, hy + size);
+    ctx.lineTo(x, hy + r + r * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    // Highlight on filled hearts
+    if (filled) {
+      ctx.fillStyle = "rgba(255,255,255,0.3)";
+      ctx.beginPath(); ctx.arc(x + r, hy + r - 1, r * 0.4, 0, Math.PI * 2); ctx.fill();
+    }
   }
 }
 
@@ -3067,8 +3122,9 @@ function startGame() {
   obstacles = []; obstacleTimer = 60;
   coins = []; coinTimer = 40;
   particles = [];
-  player.y = GROUND_Y; player.vy = 0; player.jumping = false; player.ducking = false; player.h = PLAYER_H;
+  player.y = GROUND_Y; player.vy = 0; player.jumping = false; player.ducking = false; player.h = PLAYER_H; player.doubleJumped = false;
   airObstacles = []; airTimer = 120;
+  lives = 3; hitInvincible = 0;
   // Reset power state
   const pw = getCharPower();
   powerCharges = pw ? pw.maxCharges : 0;
